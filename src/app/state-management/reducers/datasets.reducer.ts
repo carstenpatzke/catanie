@@ -342,6 +342,11 @@ export function datasetsReducer(
         case ArchViewMode.all:
           mode = {};
           break;
+        case ArchViewMode.published:
+          mode = {
+            "isPublished": true,
+          };
+          break;
         case ArchViewMode.archivable:
           mode = {
             "datasetlifecycle.archivable": true,

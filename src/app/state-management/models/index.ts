@@ -49,6 +49,7 @@ export class Message {
 export enum ArchViewMode {
   all = "all",
   archivable = "archivable",
+  published = "published",
   retrievable = "retrievable",
   work_in_progress = "work in progress",
   system_error = "system error",

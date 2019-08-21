@@ -85,6 +85,7 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
   private modes = [
     ArchViewMode.all,
     ArchViewMode.archivable,
+    ArchViewMode.published,
     ArchViewMode.retrievable,
     ArchViewMode.work_in_progress,
     ArchViewMode.system_error,
@@ -93,6 +94,7 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
   private modeLabels = [
     ArchViewMode.all,
     ArchViewMode.archivable,
+    ArchViewMode.published,
     ArchViewMode.retrievable,
     ArchViewMode.work_in_progress,
     ArchViewMode.system_error,
