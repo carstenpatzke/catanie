@@ -6,7 +6,7 @@ import {
 } from "@angular/core/testing";
 
 import { JobsDashboardComponent } from "./jobs-dashboard.component";
-import { MockStore, MockLoginService } from "shared/MockStubs";
+import { MockStore } from "shared/MockStubs";
 import { Router } from "@angular/router";
 import { Store, StoreModule } from "@ngrx/store";
 import { Job } from "shared/sdk";
@@ -14,12 +14,11 @@ import { NO_ERRORS_SCHEMA } from "@angular/core";
 import { MatButtonToggleModule } from "@angular/material";
 import { SharedCatanieModule } from "shared/shared.module";
 import { DatePipe } from "@angular/common";
-import { LoginService } from "users/login.service";
 import { rootReducer } from "state-management/reducers/root.reducer";
 import { JobViewMode } from "state-management/models";
 import {
-  SortUpdateAction,
-  CurrentJobAction
+  setJobViewModeAction,
+  changePageAction
 } from "state-management/actions/jobs.actions";
 import { PageChangeEvent } from "shared/modules/table/table.component";
 
@@ -46,10 +45,7 @@ describe("JobsDashboardComponent", () => {
     });
     TestBed.overrideComponent(JobsDashboardComponent, {
       set: {
-        providers: [
-          { provide: LoginService, useClass: MockLoginService },
-          { provide: Router, useValue: router }
-        ]
+        providers: [{ provide: Router, useValue: router }]
       }
     });
     TestBed.compileComponents();
@@ -93,39 +89,40 @@ describe("JobsDashboardComponent", () => {
   });
 
   describe("#onModeChange()", () => {
-    it("should dispatch a SortUpdateAction", () => {
+    it("should dispatch a setJobViewModeAction with an object on myJobs", () => {
       dispatchSpy = spyOn(store, "dispatch");
 
-      component.filters = {
-        skip: 0,
-        limit: 25,
-        mode: ""
-      };
-
       const event = "test";
-      const mode = JobViewMode.allJobs;
+      const mode = JobViewMode.myJobs;
+      component.email = "test@email.com";
+      const viewMode = { emailJobInitiator: component.email };
       component.onModeChange(event, mode);
 
       expect(dispatchSpy).toHaveBeenCalledTimes(1);
       expect(dispatchSpy).toHaveBeenCalledWith(
-        new SortUpdateAction(
-          component.filters.skip,
-          component.filters.limit,
-          component.filters.mode
-        )
+        setJobViewModeAction({ mode: viewMode })
+      );
+    });
+
+    it("should dispatch a setJobViewModeAction with null on allJobs", () => {
+      dispatchSpy = spyOn(store, "dispatch");
+
+      const event = "test";
+      const mode = JobViewMode.allJobs;
+      const viewMode = null;
+      component.onModeChange(event, mode);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        setJobViewModeAction({ mode: viewMode })
       );
     });
   });
 
   describe("#onPageChange()", () => {
-    it("should dispatch a SortUpdateAction", () => {
+    it("should dispatch a changePageAction", () => {
       dispatchSpy = spyOn(store, "dispatch");
 
-      component.filters = {
-        skip: 0,
-        limit: 25,
-        mode: ""
-      };
       const event: PageChangeEvent = {
         pageIndex: 0,
         pageSize: 25,
@@ -135,25 +132,17 @@ describe("JobsDashboardComponent", () => {
 
       expect(dispatchSpy).toHaveBeenCalledTimes(1);
       expect(dispatchSpy).toHaveBeenCalledWith(
-        new SortUpdateAction(
-          event.pageIndex * event.pageSize,
-          event.pageSize,
-          component.filters.mode
-        )
+        changePageAction({ page: event.pageIndex, limit: event.pageSize })
       );
     });
   });
 
   describe("#onRowClick()", () => {
-    it("should dispatch a CurrentJobAction and navigate to a job", () => {
-      dispatchSpy = spyOn(store, "dispatch");
-
+    it("should navigate to a job", () => {
       const job = new Job();
       job.id = "test";
       component.onRowClick(job);
 
-      expect(dispatchSpy).toHaveBeenCalledTimes(1);
-      expect(dispatchSpy).toHaveBeenCalledWith(new CurrentJobAction(job));
       expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
       expect(router.navigateByUrl).toHaveBeenCalledWith(
         "/user/jobs/" + encodeURIComponent(job.id)

@@ -1,11 +1,11 @@
 <div fxLayout="row" fxLayout.xs="column" *ngIf="dataset">
   <div fxFlex="80%">
-    <mat-card style="margin: 1em">
-      <mat-card-header style="background:#7de1ff;">
+    <mat-card>
+      <mat-card-header class="about-header">
         About the data
       </mat-card-header>
 
-      <table>
+      <table class="about-table">
         <tr *ngIf="dataset.datasetName as value">
           <th><mat-icon> fingerprint </mat-icon> Name</th>
           <td>{{ value }}</td>
@@ -18,23 +18,6 @@
           <th><mat-icon> person </mat-icon> Owner</th>
           <td>{{ value }}</td>
         </tr>
-        <tr *ngIf="dataset.keywords as keywords">
-          <th><mat-icon> vpn_key </mat-icon> Keywords</th>
-          <td>
-            <mat-chip-list>
-              <div *ngIf="keywords.length > 0">
-                <span *ngFor="let keyword of keywords">
-                  <mat-chip (click)="onClickKeyword(keyword)">
-                    {{ keyword }}
-                  </mat-chip>
-                </span>
-              </div>
-              <div *ngIf="keywords.length === 0">
-                <mat-chip disabled>No Keywords</mat-chip>
-              </div>
-            </mat-chip-list>
-          </td>
-        </tr>
         <tr>
           <th><mat-icon> perm_contact_calendar </mat-icon> PID</th>
           <td>{{ dataset.pid }}</td>
@@ -43,11 +26,59 @@
           <th><mat-icon> folder </mat-icon> Source Folder</th>
           <td>{{ value }}</td>
         </tr>
+        <tr class="keywords-row" *ngIf="dataset.keywords as keywords">
+          <th><mat-icon> vpn_key </mat-icon> Keywords</th>
+          <td *ngIf="!editEnabled">
+            <mat-chip-list *ngIf="keywords.length > 0" #keywordChips>
+              <mat-chip
+                *ngFor="let keyword of keywords"
+                [removable]="true"
+                (removed)="onRemoveKeyword(keyword)"
+                (click)="onClickKeyword(keyword)"
+              >
+                {{ keyword }}
+                <mat-icon matChipRemove>cancel</mat-icon>
+              </mat-chip>
+              <mat-chip class="add-keyword-chip" (click)="editEnabled = true">
+                Add Keyword <mat-icon>add</mat-icon>
+              </mat-chip>
+            </mat-chip-list>
+          </td>
+          <td *ngIf="editEnabled">
+            <mat-form-field>
+              <mat-chip-list *ngIf="keywords.length > 0" #keywordChips>
+                <mat-chip
+                  *ngFor="let keyword of keywords"
+                  [removable]="true"
+                  (removed)="onRemoveKeyword(keyword)"
+                  (click)="onClickKeyword(keyword)"
+                >
+                  {{ keyword }}
+                  <mat-icon matChipRemove>cancel</mat-icon>
+                </mat-chip>
+                <input
+                  [matChipInputFor]="keywordChips"
+                  [matChipInputSeparatorKeyCodes]="separatorKeyCodes"
+                  [matChipInputAddOnBlur]="true"
+                  (matChipInputTokenEnd)="onAddKeyword($event)"
+                />
+              </mat-chip-list>
+            </mat-form-field>
+            <button
+              mat-raised-button
+              class="done-edit-button"
+              color="accent"
+              (click)="editEnabled = false"
+            >
+              Done
+            </button>
+          </td>
+        </tr>
       </table>
     </mat-card>
 
-    <mat-card style="margin: 1em">
-      <mat-card-header style="background:#d2f082;">
+    <mat-card>
+      <mat-card-header class="structural-header">
         Structural information
       </mat-card-header>
 
@@ -86,8 +117,8 @@
       </table>
     </mat-card>
 
-    <mat-card style="margin: 1em">
-      <mat-card-header style="background:#ff6e6e;">
+    <mat-card>
+      <mat-card-header class="admin-header">
         Administrative information
       </mat-card-header>
 
@@ -98,7 +129,7 @@
         </tr>
         <tr *ngIf="dataset.principalInvestigator as value">
           <th><mat-icon> brightness_5 </mat-icon> Principal Investigator</th>
-          <td>{{ value }}</td>
+          <td><span [innerHTML]="value | linky"></span></td>
         </tr>
         <tr *ngIf="dataset.creationLocation as value">
           <th><mat-icon> map </mat-icon> Creation Location</th>
@@ -108,6 +139,10 @@
           <th><mat-icon> group </mat-icon> Owner Group</th>
           <td>{{ value }}</td>
         </tr>
+        <tr *ngIf="dataset.accessGroups as value">
+          <th><mat-icon> supervisor_account </mat-icon> Access Groups</th>
+          <td>{{ value }}</td>
+        </tr>
         <tr *ngIf="dataset.contactEmail as value">
           <th><mat-icon> email </mat-icon> Contact Email</th>
           <td><span [innerHTML]="value | linky"></span></td>
@@ -115,8 +150,8 @@
       </table>
     </mat-card>
 
-    <mat-card style="margin:1em" *ngIf="dataset.investigator">
-      <mat-card-header style="background:#d2b478;">
+    <mat-card *ngIf="dataset.investigator">
+      <mat-card-header class="derived-header">
         Derived Data
       </mat-card-header>
 
@@ -155,8 +190,8 @@
       </table>
     </mat-card>
 
-    <mat-card style="margin:1em">
-      <mat-card-header style="background:#ff96fa;">
+    <mat-card>
+      <mat-card-header class="scientific-header">
         Scientific Metadata
       </mat-card-header>
 
@@ -190,7 +225,7 @@
       </ng-template>
     </mat-card>
 
-    <mat-card style="margin:1em">
+    <mat-card>
       <button mat-stroked-button (click)="show = !show">
         {{ show ? "Hide MetaData" : "Show Metadata" }}
       </button>
@@ -208,7 +243,7 @@
 
   <div fxFlex="30%" *ngIf="attachments">
     <ng-container *ngFor="let da of attachments">
-      <mat-card style="margin: 1em">
+      <mat-card>
         <img mat-card-image src="{{ da.thumbnail }}" />
         <p>{{ da.caption }}</p>
       </mat-card>

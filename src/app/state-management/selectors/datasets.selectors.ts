@@ -1,7 +1,7 @@
 import { DatasetState } from "state-management/state/datasets.store";
 import { createFeatureSelector, createSelector } from "@ngrx/store";
 
-export const getDatasetState = createFeatureSelector<DatasetState>("datasets");
+const getDatasetState = createFeatureSelector<DatasetState>("datasets");
 
 export const getDatasets = createSelector(
   getDatasetState,
@@ -218,18 +218,6 @@ export const getSearchTerms = createSelector(
 export const getKeywordsTerms = createSelector(
   getDatasetState,
   state => state.keywordsTerms
-);
-
-export const getSearchCaughtUp = createSelector(
-  getSearchTerms,
-  getTextFilter,
-  (terms, text) => terms === text
-);
-
-export const getIsLoading = createSelector(
-  getDatasetState,
-  getSearchCaughtUp,
-  (state, caughtUp) => state.isLoading || !caughtUp
 );
 
 export const getHasPrefilledFilters = createSelector(

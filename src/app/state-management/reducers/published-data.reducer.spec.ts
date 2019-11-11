@@ -1,233 +1,83 @@
-import {
-  publishedDataReducer,
-  getSelectedPublishedDataId
-} from "./published-data.reducer";
-import { initialPublishedDataState } from "../state/publishedData.store";
-import {
-  AddPublishedData,
-  ChangePagePub,
-  FetchPublishedData,
-  FetchCountPublishedData,
-  LoadCurrentPublishedData,
-  UpsertPublishedData,
-  UpsertWaitPublishedData,
-  AddPublishedDatas,
-  UpsertPublishedDatas,
-  UpdatePublishedData,
-  UpdatePublishedDatas,
-  DeletePublishedData,
-  DeletePublishedDatas,
-  LoadPublishedDatas,
-  ClearPublishedDatas
-} from "state-management/actions/published-data.actions";
-import { PublishedData } from "shared/sdk";
-import { Update } from "@ngrx/entity";
+import { PublishedDataState } from "state-management/state/published-data.store";
+import * as fromActions from "state-management/actions/published-data.actions";
+import { publishedDataReducer } from "./published-data.reducer";
+import { PublishedData, PublishedDataInterface } from "shared/sdk";
+import { PublishedDataFilters } from "state-management/models";
+
+const data: PublishedDataInterface = {
+  doi: "testDOI",
+  affiliation: "test affiliation",
+  creator: "test creator",
+  publisher: "test publisher",
+  publicationYear: 2019,
+  title: "test title",
+  abstract: "test abstract",
+  dataDescription: "test description",
+  resourceType: "test type",
+  pidArray: ["testPid"],
+  authors: ["test author"]
+};
+const publishedData = new PublishedData(data);
+
+const filters: PublishedDataFilters = {
+  sortField: "publicationYear desc",
+  skip: 0,
+  limit: 25
+};
+
+const initialPublishedDataState: PublishedDataState = {
+  publishedData: [],
+  currentPublishedData: publishedData,
+
+  totalCount: 0,
+
+  filters
+};
 
 describe("PublishedData Reducer", () => {
-  describe("default", () => {
-    it("should return the initial state", () => {
-      const action = {} as any;
+  describe("on fetchAllPublishedDataCompleteAction", () => {
+    it("should set publishedData", () => {
+      const allPublishedData = [publishedData];
+      const action = fromActions.fetchAllPublishedDataCompleteAction({
+        publishedData: allPublishedData
+      });
       const state = publishedDataReducer(initialPublishedDataState, action);
 
-      expect(state).toBe(initialPublishedDataState);
+      expect(state.publishedData).toEqual(allPublishedData);
     });
   });
 
-  describe("AddPublishedData", () => {
-    xit("should return the initial state", () => {
-      const payload = {
-        publishedData: new PublishedData()
-      };
-      const action = new AddPublishedData(payload);
+  describe("on fetchCountCompleteAction", () => {
+    it("should set totalCount", () => {
+      const count = 100;
+      const action = fromActions.fetchCountCompleteAction({ count });
       const state = publishedDataReducer(initialPublishedDataState, action);
+
+      expect(state.totalCount).toEqual(count);
     });
   });
 
-  describe("LoadCurrentPublishedData", () => {
+  describe("on fetchPublishedDataCompleteAction", () => {
     it("should set currentPublishedData", () => {
-      const payload = {
-        publishedData: new PublishedData()
-      };
-      const action = new LoadCurrentPublishedData(payload);
+      const action = fromActions.fetchPublishedDataCompleteAction({
+        publishedData
+      });
       const state = publishedDataReducer(initialPublishedDataState, action);
 
-      expect(state.currentPublishedData).toEqual(payload.publishedData);
+      expect(state.currentPublishedData).toEqual(publishedData);
     });
   });
 
-  describe("UpsertPublishedData", () => {
-    xit("should ...", () => {
-      const payload = {
-        publishedData: new PublishedData()
-      };
-      const action = new UpsertPublishedData(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-    });
-  });
-
-  describe("UpsertWaitPublishedData", () => {
-    it("should return the initial state", () => {
-      const payload = {
-        publishedData: new PublishedData()
-      };
-      const action = new UpsertWaitPublishedData(payload);
+  describe("on changePageAction", () => {
+    it("should set skip and limit filters", () => {
+      const page = 1;
+      const limit = 25;
+      const skip = page * limit;
+      const action = fromActions.changePageAction({ page, limit });
       const state = publishedDataReducer(initialPublishedDataState, action);
 
-      expect(state).toEqual(initialPublishedDataState);
+      expect(state.filters.limit).toEqual(limit);
+      expect(state.filters.skip).toEqual(skip);
     });
-  });
-
-  describe("AddPublishedDatas", () => {
-    xit("should ...", () => {
-      const payload = {
-        publishedDatas: [new PublishedData()]
-      };
-      const action = new AddPublishedDatas(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-    });
-  });
-
-  describe("UpsertPublishedDatas", () => {
-    xit("should ...", () => {
-      const payload = {
-        publishedDatas: [new PublishedData()]
-      };
-      const action = new UpsertPublishedDatas(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-    });
-  });
-
-  describe("UpdatePublishedData", () => {
-    xit("should ...", () => {
-      const update: Update<PublishedData> = null;
-      const payload = {
-        publishedData: update
-      };
-      const action = new UpdatePublishedData(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-    });
-  });
-
-  describe("UpdatePublishedDatas", () => {
-    it("should return the initial state", () => {
-      const updates: Update<PublishedData>[] = [];
-      const payload = {
-        publishedDatas: updates
-      };
-      const action = new UpdatePublishedDatas(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state).toEqual(initialPublishedDataState);
-    });
-  });
-
-  describe("DeletePublishedData", () => {
-    it("should return the initial state", () => {
-      const payload = {
-        id: "abc123"
-      };
-      const action = new DeletePublishedData(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state).toEqual(initialPublishedDataState);
-    });
-  });
-
-  describe("DeletePublishedDatas", () => {
-    it("should return the initial state", () => {
-      const payload = {
-        ids: ["abc123"]
-      };
-      const action = new DeletePublishedDatas(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state).toEqual(initialPublishedDataState);
-    });
-  });
-
-  describe("LoadPublishedDatas", () => {
-    xit("should ...", () => {
-      const payload = {
-        publishedDatas: [new PublishedData()]
-      };
-      const action = new LoadPublishedDatas(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-    });
-  });
-
-  describe("ClearPublishedDatas", () => {
-    it("should return the initial state", () => {
-      const action = new ClearPublishedDatas();
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state).toEqual(initialPublishedDataState);
-    });
-  });
-
-  describe("ChangePagePub", () => {
-    it("should set filters", () => {
-      const payload = {
-        page: 2,
-        limit: 25
-      };
-      const action = new ChangePagePub(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state.filters.limit).toEqual(payload.limit);
-      expect(state.filters.skip).toEqual(payload.page * payload.limit);
-    });
-  });
-
-  describe("FetchCountPublishedData", () => {
-    it("should set the count", () => {
-      const payload = {
-        count: 100
-      };
-      const action = new FetchCountPublishedData(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state.count).toEqual(payload.count);
-    });
-  });
-
-  describe("FetchPublishedData", () => {
-    it("should set currentPublishedData", () => {
-      const payload = {
-        id: "abc123"
-      };
-      const action = new FetchPublishedData(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-
-      expect(state.currentPublishedData).toEqual(state.entities[payload.id]);
-    });
-  });
-
-  describe("#getSelectedPublishedDataId()", () => {
-    it("should return the doi of currentPublishedData", () => {
-      const payload = {
-        publishedData: new PublishedData()
-      };
-      const action = new LoadCurrentPublishedData(payload);
-      const state = publishedDataReducer(initialPublishedDataState, action);
-      const doi = getSelectedPublishedDataId(state);
-
-      expect(doi).toEqual(state.currentPublishedData.doi);
-    });
-  });
-
-  describe("selectPublishedDataIds", () => {
-    it("", () => {});
-  });
-
-  describe("selectPublishedDataEntities", () => {
-    it("", () => {});
-  });
-
-  describe("selectAllPublishedData", () => {
-    it("", () => {});
-  });
-
-  describe("selectPublishedDataTotal", () => {
-    it("", () => {});
   });
 });

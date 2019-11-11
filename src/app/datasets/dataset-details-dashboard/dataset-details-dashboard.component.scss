@@ -1,4 +1,21 @@
+@import "../../../theme.scss";
+
+.jupyter-button {
+  margin: 1em 0 0 1em;
+}
+
+.public-toggle {
+  margin: 1em 1em 0 0;
+  float: right;
+}
+
 mat-card {
+  margin: 1em;
+
+  .lifecycle-header {
+    background-color: mat-color($primary, lighter);
+  }
+
   mat-icon {
     vertical-align: middle;
   }
@@ -13,6 +30,11 @@ mat-card {
       padding-right: 0.5em;
     }
   }
+
+  .reset-button {
+    background-color: mat-color($yellow, 100);
+    color: mat-color($accent, default-contrast);
+  }
 }
 
 .datablocks-table {
@@ -21,28 +43,4 @@ mat-card {
 
 .file-uploader {
   margin: 1em;
-}
-
-.spinner {
-  position: fixed;
-  z-index: 999;
-  height: 2em;
-  width: 2em;
-  overflow: show;
-  margin: auto;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-}
-
-.spinner:before {
-  content: "";
-  display: block;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.1);
 }

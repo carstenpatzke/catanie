@@ -1,14 +1,16 @@
 import { Component, OnInit, Inject, OnDestroy } from "@angular/core";
 import { APP_CONFIG, AppConfig } from "app-config.module";
 import { Store, select } from "@ngrx/store";
-import * as selectors from "state-management/selectors";
-import * as ua from "state-management/actions/user.actions";
-import { Subscription, Observable } from "rxjs";
+import {
+  fetchCurrentUserAction,
+  logoutAction
+} from "state-management/actions/user.actions";
+import { Subscription } from "rxjs";
 import {
   getCurrentUserAccountType,
   getCurrentUser,
   getProfile
-} from "state-management/selectors/users.selectors";
+} from "state-management/selectors/user.selectors";
 
 @Component({
   selector: "app-app-header",
@@ -16,11 +18,9 @@ import {
   styleUrls: ["./app-header.component.scss"]
 })
 export class AppHeaderComponent implements OnInit, OnDestroy {
-  title: string;
   facility: string;
   status: string;
 
-  darkTheme$: Observable<any>;
   username: string;
   profileImage: string;
   userSubscription: Subscription;
@@ -30,19 +30,17 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     private store: Store<any>,
     @Inject(APP_CONFIG) public appConfig: AppConfig
   ) {
-    this.darkTheme$ = this.store.pipe(select(selectors.users.getTheme));
     this.facility = appConfig.facility;
     if (appConfig.production === true) {
       this.status = "";
     } else {
       this.status = "test";
     }
-    this.title = "SciCat " + this.facility + " " + this.status;
     this.profileImage = "assets/images/user.png";
   }
 
   ngOnInit() {
-    this.store.dispatch(new ua.RetrieveUserAction());
+    this.store.dispatch(fetchCurrentUserAction());
 
     this.accountTypeSubscription = this.store
       .pipe(select(getCurrentUserAccountType))
@@ -78,6 +76,6 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
   }
 
   logout(): void {
-    this.store.dispatch(new ua.LogoutAction());
+    this.store.dispatch(logoutAction());
   }
 }

@@ -18,11 +18,11 @@ import {
   initialSampleState,
   SampleState
 } from "state-management/state/samples.store";
-import * as ua from "state-management/actions/user.actions";
+import { logoutCompleteAction } from "state-management/actions/user.actions";
 import {
   initialPublishedDataState,
   PublishedDataState
-} from "state-management/state/publishedData.store";
+} from "state-management/state/published-data.store";
 import { publishedDataReducer } from "state-management/reducers/published-data.reducer";
 import { logbooksReducer } from "./logbooks.reducer";
 import {
@@ -61,7 +61,7 @@ const appReducer = combineReducers({
 });
 
 export function rootReducer(state, action) {
-  if (action.type === ua.LOGOUT_COMPLETE) {
+  if (action.type === logoutCompleteAction.type) {
     state = undefined;
   }
 

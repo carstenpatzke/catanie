@@ -54,7 +54,7 @@ export interface DateRange {
 @Component({
   selector: "datasets-filter",
   templateUrl: "datasets-filter.component.html",
-  styleUrls: ["datasets-filter.component.css"]
+  styleUrls: ["datasets-filter.component.scss"]
 })
 export class DatasetsFilterComponent {
   locationFacetCounts$ = this.store.pipe(select(getLocationFacetCounts));
@@ -201,13 +201,17 @@ export class DatasetsFilterComponent {
   }
 
   dateChanged(event: MatDatepickerInputEvent<DateRange>) {
-    const { begin, end } = event.value;
-    this.store.dispatch(
-      setDateRangeFilterAction({
-        begin: begin.toISOString(),
-        end: end.toISOString()
-      })
-    );
+    if (event.value) {
+      const { begin, end } = event.value;
+      this.store.dispatch(
+        setDateRangeFilterAction({
+          begin: begin.toISOString(),
+          end: end.toISOString()
+        })
+      );
+    } else {
+      this.store.dispatch(setDateRangeFilterAction({ begin: null, end: null }));
+    }
   }
 
   clearFacets() {

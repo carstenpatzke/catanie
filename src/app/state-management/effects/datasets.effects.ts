@@ -18,8 +18,12 @@ import {
   filter
 } from "rxjs/operators";
 import { of } from "rxjs";
-import { getCurrentUser } from "state-management/selectors/users.selectors";
-import { LOGOUT_COMPLETE } from "state-management/actions/user.actions";
+import { getCurrentUser } from "state-management/selectors/user.selectors";
+import {
+  logoutCompleteAction,
+  loadingAction,
+  loadingCompleteAction
+} from "state-management/actions/user.actions";
 
 @Injectable()
 export class DatasetEffects {
@@ -52,7 +56,6 @@ export class DatasetEffects {
       mergeMap(({ fields, facets }) => {
         return this.datasetApi.fullfacet(fields, facets).pipe(
           map(res => {
-            console.log("fetchFacetCounts$", res);
             const { all, ...facetCounts } = res[0];
             const allCounts = all && all.length > 0 ? all[0].totalSets : 0;
             return fromActions.fetchFacetCountsCompleteAction({
@@ -69,10 +72,10 @@ export class DatasetEffects {
   fetchDataset$ = createEffect(() =>
     this.actions$.pipe(
       ofType(fromActions.fetchDatasetAction),
-      switchMap(action => {
+      switchMap(({ pid, filters }) => {
         const datasetFilter = {
           where: {
-            pid: action.pid
+            pid: pid
           },
           include: [
             { relation: "origdatablocks" },
@@ -81,9 +84,9 @@ export class DatasetEffects {
           ]
         };
 
-        if (action.filter) {
-          Object.keys(action.filter).forEach(key => {
-            datasetFilter.where[key] = action.filter[key];
+        if (filters) {
+          Object.keys(filters).forEach(key => {
+            datasetFilter.where[key] = filters[key];
           });
         }
 
@@ -97,32 +100,37 @@ export class DatasetEffects {
     )
   );
 
-  saveDataset$ = createEffect(() =>
+  updateProperty$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(fromActions.saveDatasetAction),
-      mergeMap(action => {
-        const saveDataset = action.dataset;
-        saveDataset.scientificMetadata = action.metadata;
-        return this.datasetApi.updateScientificMetadata(saveDataset).pipe(
-          map(dataset => fromActions.saveDatasetCompleteAction({ dataset })),
-          catchError(() => of(fromActions.saveDatasetFailedAction()))
-        );
-      })
+      ofType(fromActions.updatePropertyAction),
+      switchMap(({ pid, property }) =>
+        this.datasetApi
+          .updateAttributes(encodeURIComponent(pid), property)
+          .pipe(
+            switchMap(() => [
+              fromActions.updatePropertyCompleteAction(),
+              fromActions.fetchDatasetAction({ pid })
+            ]),
+            catchError(() => of(fromActions.updatePropertyFailedAction()))
+          )
+      )
     )
   );
 
   addAttachment$ = createEffect(() =>
     this.actions$.pipe(
       ofType(fromActions.addAttachmentAction),
-      map(action => action.attachment),
-      switchMap(attachment => {
+      switchMap(({ attachment }) => {
         delete attachment.id;
         delete attachment.rawDatasetId;
         delete attachment.derivedDatasetId;
         delete attachment.proposalId;
         delete attachment.sampleId;
         return this.datasetApi
-          .createAttachments(encodeURI(attachment.datasetId), attachment)
+          .createAttachments(
+            encodeURIComponent(attachment.datasetId),
+            attachment
+          )
           .pipe(
             map(res =>
               fromActions.addAttachmentCompleteAction({ attachment: res })
@@ -136,13 +144,13 @@ export class DatasetEffects {
   updateAttchmentCaption$ = createEffect(() =>
     this.actions$.pipe(
       ofType(fromActions.updateAttachmentCaptionAction),
-      switchMap(action => {
-        const newCaption = { caption: action.caption };
+      switchMap(({ datasetId, attachmentId, caption }) => {
+        const data = { caption };
         return this.datasetApi
           .updateByIdAttachments(
-            encodeURIComponent(action.datasetId),
-            encodeURIComponent(action.attachmentId),
-            newCaption
+            encodeURIComponent(datasetId),
+            encodeURIComponent(attachmentId),
+            data
           )
           .pipe(
             map(attachment =>
@@ -159,14 +167,11 @@ export class DatasetEffects {
   removeAttachment$ = createEffect(() =>
     this.actions$.pipe(
       ofType(fromActions.removeAttachmentAction),
-      switchMap(action =>
+      switchMap(({ datasetId, attachmentId }) =>
         this.datasetApi
-          .destroyByIdAttachments(
-            encodeURIComponent(action.datasetId),
-            encodeURIComponent(action.attachmentId)
-          )
+          .destroyByIdAttachments(encodeURIComponent(datasetId), attachmentId)
           .pipe(
-            map(attachmentId =>
+            map(() =>
               fromActions.removeAttachmentCompleteAction({ attachmentId })
             ),
             catchError(() => of(fromActions.removeAttachmentFailedAction()))
@@ -178,12 +183,49 @@ export class DatasetEffects {
   reduceDataset$ = createEffect(() =>
     this.actions$.pipe(
       ofType(fromActions.reduceDatasetAction),
-      mergeMap(action =>
-        this.datasetApi.reduceDataset(action.dataset).pipe(
+      mergeMap(({ dataset }) =>
+        this.datasetApi.reduceDataset(dataset).pipe(
           map(result => fromActions.reduceDatasetCompleteAction({ result })),
           catchError(() => of(fromActions.reduceDatasetFailedAction()))
         )
       )
+    )
+  );
+
+  loading$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(
+        fromActions.fetchDatasetsAction,
+        fromActions.fetchFacetCountsAction,
+        fromActions.fetchDatasetAction,
+        fromActions.updatePropertyAction,
+        fromActions.addAttachmentAction,
+        fromActions.updateAttachmentCaptionAction,
+        fromActions.removeAttachmentAction
+      ),
+      switchMap(() => of(loadingAction()))
+    )
+  );
+
+  loadingComplete$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(
+        fromActions.fetchDatasetsCompleteAction,
+        fromActions.fetchDatasetsFailedAction,
+        fromActions.fetchFacetCountsCompleteAction,
+        fromActions.fetchFacetCountsFailedAction,
+        fromActions.fetchDatasetCompleteAction,
+        fromActions.fetchDatasetFailedAction,
+        fromActions.updatePropertyCompleteAction,
+        fromActions.updatePropertyFailedAction,
+        fromActions.addAttachmentCompleteAction,
+        fromActions.addAttachmentFailedAction,
+        fromActions.updateAttachmentCaptionCompleteAction,
+        fromActions.updateAttachmentCaptionFailedAction,
+        fromActions.removeAttachmentCompleteAction,
+        fromActions.removeAttachmentFailedAction
+      ),
+      switchMap(() => of(loadingCompleteAction()))
     )
   );
 
@@ -214,7 +256,7 @@ export class DatasetEffects {
   protected clearBatchOnLogout$ = createEffect(
     () =>
       this.actions$.pipe(
-        ofType(LOGOUT_COMPLETE),
+        ofType(logoutCompleteAction),
         tap(() => this.storeBatch([], null))
       ),
     { dispatch: false }

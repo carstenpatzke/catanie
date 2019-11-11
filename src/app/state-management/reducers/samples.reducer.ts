@@ -1,242 +1,102 @@
-import { initialSampleState, SampleState } from "../state/samples.store";
+import { createReducer, Action, on } from "@ngrx/store";
 import {
-  FETCH_SAMPLE,
-  FETCH_SAMPLE_COMPLETE,
-  FETCH_SAMPLE_FAILED,
-  FETCH_SAMPLES,
-  FETCH_SAMPLES_COMPLETE,
-  FETCH_SAMPLES_FAILED,
-  FetchSampleCompleteAction,
-  FetchSamplesCompleteAction,
-  SELECT_SAMPLE,
-  SelectSampleAction,
-  ADD_SAMPLE,
-  ADD_SAMPLE_COMPLETE,
-  ADD_SAMPLE_FAILED,
-  SAMPLE_SORT_BY_COLUMN,
-  SampleSortByColumnAction,
-  FETCH_SAMPLE_COUNT_COMPLETE,
-  FETCH_SAMPLE_COUNT_FAILED,
-  FETCH_SAMPLE_COUNT,
-  CHANGE_PAGE,
-  ChangePageAction,
-  FetchSampleCountCompleteAction,
-  SEARCH_SAMPLES,
-  SearchSampleAction,
-  SET_CURRENT_SAMPLE,
-  SetCurrentSample,
-  FETCH_DATASETS_FOR_SAMPLE,
-  FETCH_DATASETS_FOR_SAMPLE_COMPLETE,
-  FetchDatasetsForSampleComplete,
-  SET_CURRENT_DATASETS,
-  SetCurrentDatasets,
-  ADD_ATTACHMENT,
-  ADD_ATTACHMENT_COMPLETE,
-  AddAttachmentCompleteAction,
-  ADD_ATTACHMENT_FAILED,
-  DELETE_ATTACHMENT_COMPLETE,
-  DELETE_ATTACHMENT,
-  DeleteAttachmentCompleteAction,
-  DELETE_ATTACHMENT_FAILED,
-  UPDATE_ATTACHMENT_CAPTION_COMPLETE,
-  UPDATE_ATTACHMENT_CAPTION_FAILED,
-  UpdateAttachmentCaptionCompleteAction
-} from "state-management/actions/samples.actions";
-import { Action } from "@ngrx/store";
-import { Dataset } from "shared/sdk";
+  SampleState,
+  initialSampleState
+} from "state-management/state/samples.store";
+import * as fromActions from "state-management/actions/samples.actions";
 
-export function samplesReducer(
-  state: SampleState = initialSampleState,
-  action: Action
-): SampleState {
+const reducer = createReducer(
+  initialSampleState,
+  on(fromActions.fetchSamplesCompleteAction, (state, { samples }) => ({
+    ...state,
+    samples
+  })),
+
+  on(fromActions.fetchSamplesCountCompleteAction, (state, { count }) => ({
+    ...state,
+    samplesCount: count
+  })),
+
+  on(fromActions.fetchSampleCompleteAction, (state, { sample }) => ({
+    ...state,
+    currentSample: sample
+  })),
+
+  on(fromActions.fetchSampleDatasetsCompleteAction, (state, { datasets }) => ({
+    ...state,
+    datasets
+  })),
+
+  on(
+    fromActions.fetchSampleDatasetsCountCompleteAction,
+    (state, { count }) => ({ ...state, datasetsCount: count })
+  ),
+
+  on(fromActions.addSampleCompleteAction, (state, { sample }) => {
+    const samples = state.samples;
+    samples.push(sample);
+    return { ...state, samples };
+  }),
+
+  on(fromActions.saveCharacteristicsCompleteAction, (state, { sample }) => ({
+    ...state,
+    currentSample: sample
+  })),
+
+  on(fromActions.addAttachmentCompleteAction, (state, { attachment }) => {
+    const attachments = state.currentSample.attachments;
+    attachments.push(attachment);
+    const currentSample = { ...state.currentSample, attachments };
+    return { ...state, currentSample };
+  }),
+
+  on(
+    fromActions.updateAttachmentCaptionCompleteAction,
+    (state, { attachment }) => {
+      const attachments = state.currentSample.attachments.filter(
+        existingAttachment => existingAttachment.id !== attachment.id
+      );
+      attachments.push(attachment);
+      const currentSample = { ...state.currentSample, attachments };
+      return { ...state, currentSample };
+    }
+  ),
+
+  on(fromActions.removeAttachmentCompleteAction, (state, { attachmentId }) => {
+    const attachments = state.currentSample.attachments.filter(
+      attachment => attachment.id !== attachmentId
+    );
+    const currentSample = { ...state.currentSample, attachments };
+    return { ...state, currentSample };
+  }),
+
+  on(fromActions.changePageAction, (state, { page, limit }) => {
+    const skip = page * limit;
+    const samplefilters = { ...state.samplefilters, skip, limit };
+    return { ...state, samplefilters };
+  }),
+
+  on(fromActions.changeDatasetsPageAction, (state, { page, limit }) => {
+    const skip = page * limit;
+    const datasetFilters = { ...state.datasetFilters, skip, limit };
+    return { ...state, datasetFilters };
+  }),
+
+  on(fromActions.sortByColumnAction, (state, { column, direction }) => {
+    const sortField = column + (direction ? ":" + direction : "");
+    const samplefilters = { ...state.samplefilters, sortField, skip: 0 };
+    return { ...state, samplefilters };
+  }),
+
+  on(fromActions.setTextFilterAction, (state, { text }) => ({
+    ...state,
+    samplefilters: { ...state.samplefilters, text }
+  }))
+);
+
+export function samplesReducer(state: SampleState | undefined, action: Action) {
   if (action.type.indexOf("[Sample]") !== -1) {
     console.log("Action came in! " + action.type);
   }
-
-  switch (action.type) {
-    case SELECT_SAMPLE: {
-      const selectedId = (action as SelectSampleAction).sampleId;
-      return { ...state, selectedId };
-    }
-
-    case SET_CURRENT_SAMPLE: {
-      const s = Object.assign({}, state, {
-        currentSample: (action as SetCurrentSample).sample
-      });
-      return s;
-    }
-
-    case SET_CURRENT_DATASETS: {
-      const datasets = (action as SetCurrentDatasets).datasets;
-      const datasetPids = datasets.map((dataset: Dataset) => dataset.pid);
-      return { ...state, datasets: datasetPids };
-    }
-
-    case SAMPLE_SORT_BY_COLUMN: {
-      const { column, direction } = action as SampleSortByColumnAction;
-      const sortField = column + (direction ? " " + direction : "");
-      const filters = { ...state.filters, sortField, skip: 0 };
-      return { ...state, filters, samplesLoading: true };
-    }
-
-    case ADD_SAMPLE: {
-      return { ...state };
-    }
-
-    case SEARCH_SAMPLES: {
-      const { query } = action as SearchSampleAction;
-      const filters = { ...state.filters, text: query };
-      return { ...state, filters, searchTerms: query };
-    }
-
-    case ADD_SAMPLE_COMPLETE: {
-      return { ...state };
-    }
-    case ADD_SAMPLE_FAILED: {
-      return { ...state };
-    }
-
-    case FETCH_DATASETS_FOR_SAMPLE: {
-      return { ...state, datasetsLoading: true };
-    }
-
-    case FETCH_SAMPLES: {
-      return { ...state, samplesLoading: true };
-    }
-
-    case FETCH_DATASETS_FOR_SAMPLE_COMPLETE: {
-      const list = (action as FetchDatasetsForSampleComplete).datasets;
-
-      const datasets = list.map(function(item) {
-        return item["pid"];
-      });
-
-      return { ...state, datasets, datasetsLoading: false };
-    }
-
-    case FETCH_SAMPLES_COMPLETE: {
-      const list = (action as FetchSamplesCompleteAction).samples;
-      const samples = list.reduce(
-        (samples2, sample) => ({
-          ...samples2,
-          [sample.sampleId]: sample
-        }),
-        {}
-      );
-      return { ...state, samples, samplesLoading: false };
-    }
-
-    case FETCH_SAMPLES_FAILED: {
-      return { ...state, samplesLoading: false };
-    }
-
-    case FETCH_SAMPLE: {
-      return { ...state, samplesLoading: true };
-    }
-
-    case FETCH_SAMPLE_COMPLETE: {
-      const currentSample = (action as FetchSampleCompleteAction).currentSample;
-      return { ...state, currentSample, samplesLoading: false };
-    }
-
-    case FETCH_SAMPLE_FAILED: {
-      return { ...state, samplesLoading: false };
-    }
-
-    case FETCH_SAMPLE_COUNT: {
-      return { ...state, samplesLoading: true };
-    }
-
-    case FETCH_SAMPLE_COUNT_COMPLETE: {
-      const totalCount = (action as FetchSampleCountCompleteAction).sampleCount;
-      return { ...state, totalCount, samplesLoading: false };
-    }
-
-    case FETCH_SAMPLE_COUNT_FAILED: {
-      return { ...state, samplesLoading: false };
-    }
-
-    case CHANGE_PAGE: {
-      const { page, limit } = action as ChangePageAction;
-      const skip = page * limit;
-      const filters = { ...state.filters, skip, limit };
-      return {
-        ...state,
-        samplesLoading: true,
-        filters
-      };
-    }
-
-    case ADD_ATTACHMENT: {
-      return { ...state, addingAttachment: true };
-    }
-
-    case ADD_ATTACHMENT_COMPLETE: {
-      const attachment = (action as AddAttachmentCompleteAction).attachment;
-      const attachments = state.currentSample.attachments;
-      const attach2 = new Set(attachments);
-      attach2.add(attachment);
-
-      return {
-        ...state,
-        addingAttachment: false,
-        currentSample: {
-          ...state.currentSample,
-          attachments: Array.from(attach2)
-        }
-      };
-    }
-
-    case ADD_ATTACHMENT_FAILED: {
-      return { ...state };
-    }
-
-    case DELETE_ATTACHMENT: {
-      return { ...state, deletingAttachment: true };
-    }
-
-    case DELETE_ATTACHMENT_COMPLETE: {
-      const attachments = state.currentSample.attachments;
-      const attachmentId = (action as DeleteAttachmentCompleteAction)
-        .attachmentId;
-      const attach2 = attachments.filter(
-        attachment => attachment.id !== attachmentId
-      );
-      return {
-        ...state,
-        deletingAttachment: false,
-        currentSample: { ...state.currentSample, attachments: attach2 }
-      };
-    }
-
-    case DELETE_ATTACHMENT_FAILED: {
-      return { ...state };
-    }
-
-    case UPDATE_ATTACHMENT_CAPTION_COMPLETE: {
-      const updatedAttachment = (action as UpdateAttachmentCaptionCompleteAction)
-        .attachment;
-      const attachments = state.currentSample.attachments;
-      const attach2 = attachments.filter(
-        attachment => attachment.id !== updatedAttachment.id
-      );
-      attach2.push(updatedAttachment);
-
-      return {
-        ...state,
-        currentSample: {
-          ...state.currentSample,
-          attachments: attach2
-        }
-      };
-    }
-
-    case UPDATE_ATTACHMENT_CAPTION_FAILED: {
-      return { ...state };
-    }
-
-    default: {
-      return state;
-    }
-  }
+  return reducer(state, action);
 }

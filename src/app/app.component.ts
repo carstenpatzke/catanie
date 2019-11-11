@@ -4,15 +4,21 @@ import {
   Inject,
   OnDestroy,
   OnInit,
-  ViewEncapsulation
+  ViewEncapsulation,
+  AfterViewChecked,
+  ChangeDetectorRef
 } from "@angular/core";
 import { select, Store } from "@ngrx/store";
 import { LoopBackConfig } from "shared/sdk";
-import * as ua from "state-management/actions/user.actions";
+import {
+  clearMessageAction,
+  logoutAction
+} from "state-management/actions/user.actions";
 import { MatSnackBar } from "@angular/material";
 import { Meta, Title } from "@angular/platform-browser";
 import { environment } from "../environments/environment";
 import { Subscription } from "rxjs";
+import { getIsLoading } from "state-management/selectors/user.selectors";
 
 const { version: appVersion } = require("../../package.json");
 
@@ -22,7 +28,9 @@ const { version: appVersion } = require("../../package.json");
   styleUrls: ["./app.component.scss"],
   encapsulation: ViewEncapsulation.None
 })
-export class AppComponent implements OnDestroy, OnInit {
+export class AppComponent implements OnDestroy, OnInit, AfterViewChecked {
+  loading$ = this.store.pipe(select(getIsLoading));
+
   title: string;
   facility: string;
   status: string;
@@ -30,6 +38,7 @@ export class AppComponent implements OnDestroy, OnInit {
   userMessageSubscription: Subscription;
 
   constructor(
+    private cdRef: ChangeDetectorRef,
     private metaService: Meta,
     public snackBar: MatSnackBar,
     private titleService: Title,
@@ -75,9 +84,13 @@ export class AppComponent implements OnDestroy, OnInit {
           this.snackBar.open(current.content, undefined, {
             duration: current.duration
           });
-          this.store.dispatch(new ua.ClearMessageAction());
+          this.store.dispatch(clearMessageAction());
         }
       });
+  }
+
+  ngAfterViewChecked() {
+    this.cdRef.detectChanges();
   }
 
   ngOnDestroy() {
@@ -85,6 +98,6 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   logout(): void {
-    this.store.dispatch(new ua.LogoutAction());
+    this.store.dispatch(logoutAction());
   }
 }

@@ -14,9 +14,9 @@ import {
   addAttachmentAction,
   updateAttachmentCaptionAction,
   removeAttachmentAction,
-  saveDatasetAction
+  updatePropertyAction
 } from "state-management/actions/datasets.actions";
-import { Dataset, UserApi, RawDataset } from "shared/sdk";
+import { Dataset, UserApi, RawDataset, User, DerivedDataset } from "shared/sdk";
 import { ReadFile, ReadMode } from "ngx-file-helpers";
 import { NO_ERRORS_SCHEMA } from "@angular/core";
 import { AppConfigModule, APP_CONFIG } from "app-config.module";
@@ -24,6 +24,7 @@ import { SharedCatanieModule } from "shared/shared.module";
 import { rootReducer } from "state-management/reducers/root.reducer";
 import { Router, ActivatedRoute } from "@angular/router";
 import { SubmitCaptionEvent } from "shared/modules/file-uploader/file-uploader.component";
+import { MatSlideToggleChange, MatSlideToggle } from "@angular/material";
 
 describe("DetailsDashboardComponent", () => {
   let component: DatasetDetailsDashboardComponent;
@@ -82,6 +83,111 @@ describe("DetailsDashboardComponent", () => {
     expect(component).toBeTruthy();
   });
 
+  describe("#isPI()", () => {
+    it("should return true if user email equals principalInvestigator of a raw dataset", () => {
+      component.user = new User({ email: "test@email.com" });
+      component.dataset = new RawDataset({
+        principalInvestigator: "test@email.com",
+        creationLocation: "test",
+        owner: "test",
+        contactEmail: "test",
+        sourceFolder: "test",
+        creationTime: new Date(),
+        type: "raw",
+        ownerGroup: "test"
+      });
+      const isPI = component.isPI();
+
+      expect(isPI).toEqual(true);
+    });
+
+    it("should return false if user email does not equal principalInvestigator of a raw dataset", () => {
+      component.user = new User({ email: "failTest@email.com" });
+      component.dataset = new RawDataset({
+        principalInvestigator: "test@email.com",
+        creationLocation: "test",
+        owner: "test",
+        contactEmail: "test",
+        sourceFolder: "test",
+        creationTime: new Date(),
+        type: "raw",
+        ownerGroup: "test"
+      });
+      const isPI = component.isPI();
+
+      expect(isPI).toEqual(false);
+    });
+
+    it("should return true if user email equals investigator of a derived dataset", () => {
+      component.user = new User({ email: "test@email.com" });
+      component.dataset = new DerivedDataset({
+        investigator: "test@email.com",
+        inputDatasets: ["test"],
+        usedSoftware: ["test"],
+        owner: "test",
+        contactEmail: "test",
+        sourceFolder: "test",
+        creationTime: new Date(),
+        type: "derived",
+        ownerGroup: "test"
+      });
+      const isPI = component.isPI();
+
+      expect(isPI).toEqual(true);
+    });
+
+    it("should return false if user email does not equal investigator of a derived dataset", () => {
+      component.user = new User({ email: "failTest@email.com" });
+      component.dataset = new DerivedDataset({
+        investigator: "test@email.com",
+        inputDatasets: ["test"],
+        usedSoftware: ["test"],
+        owner: "test",
+        contactEmail: "test",
+        sourceFolder: "test",
+        creationTime: new Date(),
+        type: "derived",
+        ownerGroup: "test"
+      });
+      const isPI = component.isPI();
+
+      expect(isPI).toEqual(false);
+    });
+
+    it("should return false if dataset type is neither 'raw' or 'derived'", () => {
+      component.user = new User({ email: "failTest@email.com" });
+      component.dataset = new RawDataset({
+        principalInvestigator: "test@email.com",
+        creationLocation: "test",
+        owner: "test",
+        contactEmail: "test",
+        sourceFolder: "test",
+        creationTime: new Date(),
+        type: "failTest",
+        ownerGroup: "test"
+      });
+      const isPI = component.isPI();
+      expect(isPI).toEqual(false);
+    });
+  });
+
+  describe("#onSlidePublic()", () => {
+    it("should dispatch a updatePropertyAction", () => {
+      dispatchSpy = spyOn(store, "dispatch");
+      const pid = "testPid";
+      component.dataset = new RawDataset();
+      component.dataset.pid = pid;
+      const event = new MatSlideToggleChange({} as MatSlideToggle, true);
+      const property = { isPublished: true };
+      component.onSlidePublic(event);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        updatePropertyAction({ pid, property })
+      );
+    });
+  });
+
   describe("#onClickKeyword()", () => {
     it(" should update datasets keyword filter and navigate to datasets table", () => {
       dispatchSpy = spyOn(store, "dispatch");
@@ -94,6 +200,66 @@ describe("DetailsDashboardComponent", () => {
         addKeywordFilterAction({ keyword })
       );
       expect(router.navigateByUrl).toHaveBeenCalledWith("/datasets");
+    });
+  });
+
+  describe("#onAddKeyword()", () => {
+    it("should do nothing if keyword already exists", () => {
+      dispatchSpy = spyOn(store, "dispatch");
+
+      const keyword = "test";
+      component.dataset = new RawDataset();
+      component.dataset.keywords = [keyword];
+      component.onAddKeyword(keyword);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(0);
+    });
+
+    it("should dispatch an updatePropertyAction if the keyword does not exist", () => {
+      dispatchSpy = spyOn(store, "dispatch");
+
+      const keyword = "test";
+      const pid = "testPid";
+      component.dataset = new RawDataset();
+      component.dataset.pid = pid;
+      component.dataset.keywords = [];
+      const property = { keywords: [keyword] };
+      component.onAddKeyword(keyword);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        updatePropertyAction({ pid, property })
+      );
+    });
+  });
+
+  describe("#onRemoveKeyword()", () => {
+    it("should do nothing if the keyword does not exist", () => {
+      dispatchSpy = spyOn(store, "dispatch");
+
+      const keyword = "test";
+      component.dataset = new RawDataset();
+      component.dataset.keywords = [];
+      component.onRemoveKeyword(keyword);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(0);
+    });
+
+    it("should dispatch an updatePropertyAction if the keyword does exist", () => {
+      dispatchSpy = spyOn(store, "dispatch");
+
+      const keyword = "test";
+      const pid = "testPid";
+      component.dataset = new RawDataset();
+      component.dataset.pid = pid;
+      component.dataset.keywords = [keyword];
+      const property = { keywords: [] };
+      component.onRemoveKeyword(keyword);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        updatePropertyAction({ pid, property })
+      );
     });
   });
 
@@ -121,14 +287,16 @@ describe("DetailsDashboardComponent", () => {
     it("should dispatch a SaveDatasetAction", () => {
       dispatchSpy = spyOn(store, "dispatch");
 
+      const pid = "testPid";
       component.dataset = new RawDataset();
-      const saveDataset = { ...component.dataset } as RawDataset;
+      component.dataset.pid = pid;
       const metadata = {};
+      const property = { scientificMetadata: metadata };
       component.onSaveMetadata(metadata);
 
       expect(dispatchSpy).toHaveBeenCalledTimes(1);
       expect(dispatchSpy).toHaveBeenCalledWith(
-        saveDatasetAction({ dataset: saveDataset, metadata })
+        updatePropertyAction({ pid, property })
       );
     });
   });

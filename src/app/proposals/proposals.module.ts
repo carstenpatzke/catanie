@@ -11,7 +11,7 @@ import { ProposalDetailComponent } from "./proposal-detail/proposal-detail.compo
 import { ViewProposalPageComponent } from "./view-proposal-page/view-proposal-page.component";
 
 import { proposalsReducer } from "../state-management/reducers/proposals.reducer";
-import { ProposalsEffects } from "../state-management/effects/proposals.effects";
+import { ProposalEffects } from "../state-management/effects/proposals.effects";
 
 import {
   MatTableModule,
@@ -21,21 +21,29 @@ import {
   MatIconModule,
   MatPaginatorModule,
   MatSortModule,
-  MatButtonModule
+  MatButtonModule,
+  MatFormFieldModule,
+  MatInputModule,
+  MatExpansionModule
 } from "@angular/material";
 import { SharedCatanieModule } from "../shared/shared.module";
 import { ProposalDashboardComponent } from "./proposal-dashboard/proposal-dashboard.component";
 import { FlexLayoutModule } from "@angular/flex-layout";
 import { FileSizePipe } from "shared/pipes/filesize.pipe";
+import { SatDatepickerModule } from "saturn-datepicker";
+import { ProposalFilterComponent } from './proposal-filter/proposal-filter.component';
 
 @NgModule({
   imports: [
     CommonModule,
-    EffectsModule.forFeature([ProposalsEffects]),
+    EffectsModule.forFeature([ProposalEffects]),
     FlexLayoutModule,
     MatButtonModule,
     MatCardModule,
+    MatExpansionModule,
     MatIconModule,
+    MatInputModule,
+    MatFormFieldModule,
     MatPaginatorModule,
     MatSortModule,
     MatTableModule,
@@ -43,13 +51,15 @@ import { FileSizePipe } from "shared/pipes/filesize.pipe";
     MatTooltipModule,
     NgxJsonViewerModule,
     RouterModule,
+    SatDatepickerModule,
     SharedCatanieModule,
     StoreModule.forFeature("proposals", proposalsReducer)
   ],
   declarations: [
     ViewProposalPageComponent,
     ProposalDetailComponent,
-    ProposalDashboardComponent
+    ProposalDashboardComponent,
+    ProposalFilterComponent
   ],
   exports: [],
   providers: [DatePipe, FileSizePipe, SlicePipe]

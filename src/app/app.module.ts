@@ -9,12 +9,10 @@ import { DatasetEffects } from "state-management/effects/datasets.effects";
 import { DatasetsModule } from "datasets/datasets.module";
 import { EffectsModule } from "@ngrx/effects";
 import { FlexLayoutModule } from "@angular/flex-layout";
-import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 import { HttpClientModule } from "@angular/common/http";
-import { JobsEffects } from "state-management/effects/jobs.effects";
+import { JobEffects } from "state-management/effects/jobs.effects";
 import { NgModule } from "@angular/core";
-import { NguiDatetimePickerModule } from "@ngui/datetime-picker";
-import { PoliciesEffects } from "state-management/effects/policies.effects";
+import { PolicyEffects } from "state-management/effects/policies.effects";
 import { PoliciesModule } from "policies/policies.module";
 import { ProposalsModule } from "proposals/proposals.module";
 import { RouterModule } from "@angular/router";
@@ -30,19 +28,20 @@ import { UsersModule } from "users/users.module";
 import { PublishedDataEffects } from "state-management/effects/published-data.effects";
 import { rootReducer } from "state-management/reducers/root.reducer";
 import { routerReducer } from "@ngrx/router-store";
-import { LoginService } from "users/login.service";
 
 import {
   MatMenuModule,
   MatNativeDateModule,
   MatSnackBarModule,
-  MatToolbarModule
+  MatToolbarModule,
+  MatProgressSpinnerModule,
+  MatIconModule
 } from "@angular/material";
-import { SamplesEffects } from "./state-management/effects/samples.effects";
+import { SampleEffects } from "./state-management/effects/samples.effects";
 import { ServiceWorkerModule } from "@angular/service-worker";
 import { environment } from "../environments/environment";
 import { LogbooksModule } from "./logbooks/logbooks.module";
-import { LogbookEffect } from "state-management/effects/logbooks.effects";
+import { LogbookEffects } from "state-management/effects/logbooks.effects";
 import { AboutModule } from "about/about.module";
 import { HelpModule } from "help/help.module";
 import { PublisheddataModule } from "publisheddata/publisheddata.module";
@@ -68,15 +67,15 @@ import { JobsModule } from "jobs/jobs.module";
     BrowserModule,
     DatasetsModule,
     FlexLayoutModule,
-    FontAwesomeModule,
     HelpModule,
     HttpClientModule,
     JobsModule,
     LogbooksModule,
+    MatIconModule,
     MatMenuModule,
+    MatProgressSpinnerModule,
     MatSnackBarModule,
     MatToolbarModule,
-    NguiDatetimePickerModule,
     PoliciesModule,
     ProposalsModule,
     PublisheddataModule,
@@ -105,10 +104,10 @@ import { JobsModule } from "jobs/jobs.module";
     EffectsModule.forRoot([
       DatasetEffects,
       UserEffects,
-      JobsEffects,
-      PoliciesEffects,
-      SamplesEffects,
-      LogbookEffect,
+      JobEffects,
+      PolicyEffects,
+      SampleEffects,
+      LogbookEffects,
       PublishedDataEffects
     ]),
     ServiceWorkerModule.register("ngsw-worker.js", {
@@ -122,7 +121,6 @@ import { JobsModule } from "jobs/jobs.module";
     SampleApi,
     Title,
     MatNativeDateModule,
-    LoginService,
     RedirectGuard
   ],
   bootstrap: [AppComponent]

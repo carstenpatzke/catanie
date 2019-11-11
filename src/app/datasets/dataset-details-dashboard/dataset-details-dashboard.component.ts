@@ -22,32 +22,29 @@ import {
   getCurrentOrigDatablocks,
   getCurrentDatablocks,
   getCurrentAttachments,
-  getPublicViewMode,
-  getIsLoading
+  getPublicViewMode
 } from "state-management/selectors/datasets.selectors";
 import {
   getIsAdmin,
   getCurrentUser
-} from "state-management/selectors/users.selectors";
+} from "state-management/selectors/user.selectors";
 import { ActivatedRoute, Router } from "@angular/router";
 import { Subscription, Observable } from "rxjs";
 import { pluck, take } from "rxjs/operators";
 import { APP_CONFIG, AppConfig } from "app-config.module";
-import { Message, MessageType } from "state-management/models";
-import { submitJob, getError } from "state-management/selectors/jobs.selectors";
-import { ShowMessageAction } from "state-management/actions/user.actions";
 import {
   clearFacetsAction,
   addKeywordFilterAction,
-  saveDatasetAction,
+  updatePropertyAction,
   updateAttachmentCaptionAction,
   removeAttachmentAction,
   fetchDatasetAction,
   addAttachmentAction
 } from "state-management/actions/datasets.actions";
-import { SubmitAction } from "state-management/actions/jobs.actions";
+import { submitJobAction } from "state-management/actions/jobs.actions";
 import { ReadFile } from "ngx-file-helpers";
 import { SubmitCaptionEvent } from "shared/modules/file-uploader/file-uploader.component";
+import { MatSlideToggleChange } from "@angular/material";
 
 @Component({
   selector: "dataset-details-dashboard",
@@ -61,20 +58,61 @@ export class DatasetDetailsDashboardComponent
   datablocks$ = this.store.pipe(select(getCurrentDatablocks));
   attachments$ = this.store.pipe(select(getCurrentAttachments));
   isAdmin$ = this.store.pipe(select(getIsAdmin));
-  loading$ = this.store.pipe(select(getIsLoading));
   jwt$: Observable<any>;
 
   dataset: RawDataset | DerivedDataset;
-  viewPublic: boolean;
+  user: User;
   pickedFile: ReadFile;
   attachment: Attachment;
 
   private subscriptions: Subscription[] = [];
 
+  isPI(): boolean {
+    if (this.dataset.type === "raw") {
+      return (
+        this.user.email.toLowerCase() ===
+        (this.dataset as RawDataset).principalInvestigator.toLowerCase()
+      );
+    } else if (this.dataset.type === "derived") {
+      return (
+        this.user.email.toLowerCase() ===
+        (this.dataset as DerivedDataset).investigator.toLowerCase()
+      );
+    } else {
+      return false;
+    }
+  }
+
+  onSlidePublic(event: MatSlideToggleChange) {
+    const pid = this.dataset.pid;
+    const property = { isPublished: event.checked };
+    this.store.dispatch(updatePropertyAction({ pid, property }));
+  }
+
   onClickKeyword(keyword: string) {
     this.store.dispatch(clearFacetsAction());
     this.store.dispatch(addKeywordFilterAction({ keyword }));
     this.router.navigateByUrl("/datasets");
+  }
+
+  onAddKeyword(keyword: string) {
+    if (this.dataset.keywords.indexOf(keyword) === -1) {
+      const pid = this.dataset.pid;
+      const keywords = [...this.dataset.keywords].concat(keyword);
+      const property = { keywords };
+      this.store.dispatch(updatePropertyAction({ pid, property }));
+    }
+  }
+
+  onRemoveKeyword(keyword: string) {
+    const index = this.dataset.keywords.indexOf(keyword);
+    if (index >= 0) {
+      const pid = this.dataset.pid;
+      const keywords = [...this.dataset.keywords];
+      keywords.splice(index, 1);
+      const property = { keywords };
+      this.store.dispatch(updatePropertyAction({ pid, property }));
+    }
   }
 
   onClickProposal(proposalId: string) {
@@ -88,8 +126,9 @@ export class DatasetDetailsDashboardComponent
   }
 
   onSaveMetadata(metadata: object) {
-    const saveDataset = { ...this.dataset } as RawDataset;
-    this.store.dispatch(saveDatasetAction({ dataset: saveDataset, metadata }));
+    const pid = this.dataset.pid;
+    const property = { scientificMetadata: metadata };
+    this.store.dispatch(updatePropertyAction({ pid, property }));
   }
 
   resetDataset(dataset: Dataset) {
@@ -119,7 +158,7 @@ export class DatasetDetailsDashboardComponent
         fileObj["files"] = fileList;
         job.datasetList = [fileObj];
         console.log(job);
-        this.store.dispatch(new SubmitAction(job));
+        this.store.dispatch(submitJobAction({ job }));
       });
   }
 
@@ -173,21 +212,24 @@ export class DatasetDetailsDashboardComponent
   ) {}
 
   ngOnInit() {
-    const message = new Message();
-
     this.subscriptions.push(
       this.route.params.pipe(pluck("id")).subscribe((id: string) => {
         if (id) {
-          if (this.viewPublic) {
-            this.store.dispatch(
-              fetchDatasetAction({
-                pid: id,
-                filter: { isPublished: this.viewPublic }
-              })
-            );
-          } else {
-            this.store.dispatch(fetchDatasetAction({ pid: id }));
-          }
+          this.store
+            .pipe(select(getPublicViewMode))
+            .subscribe(viewPublic => {
+              if (viewPublic) {
+                this.store.dispatch(
+                  fetchDatasetAction({
+                    pid: id,
+                    filters: { isPublished: viewPublic }
+                  })
+                );
+              } else {
+                this.store.dispatch(fetchDatasetAction({ pid: id }));
+              }
+            })
+            .unsubscribe();
         }
       })
     );
@@ -203,34 +245,10 @@ export class DatasetDetailsDashboardComponent
     );
 
     this.subscriptions.push(
-      this.store.pipe(select(submitJob)).subscribe(
-        ret => {
-          if (ret && Array.isArray(ret)) {
-            console.log(ret);
-          }
-        },
-        error => {
-          console.log(error);
-          message.type = MessageType.Error;
-          message.content = "Job not Submitted";
-          this.store.dispatch(new ShowMessageAction(message));
+      this.store.pipe(select(getCurrentUser)).subscribe(user => {
+        if (user) {
+          this.user = user;
         }
-      )
-    );
-
-    this.subscriptions.push(
-      this.store.pipe(select(getError)).subscribe(err => {
-        if (err) {
-          message.type = MessageType.Error;
-          message.content = err.message;
-          this.store.dispatch(new ShowMessageAction(message));
-        }
-      })
-    );
-
-    this.subscriptions.push(
-      this.store.pipe(select(getPublicViewMode)).subscribe(viewPublic => {
-        this.viewPublic = viewPublic;
       })
     );
 

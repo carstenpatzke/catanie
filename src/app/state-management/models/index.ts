@@ -35,6 +35,12 @@ export interface Settings {
   darkTheme: false;
 }
 
+export interface TableColumn {
+  name: string;
+  order: number;
+  enabled: boolean;
+}
+
 export enum MessageType {
   Success = "success",
   Error = "error"
@@ -114,7 +120,8 @@ export interface LogbookFilters {
 }
 
 export interface JobFilters {
+  mode: object;
+  sortField: string;
   skip: number;
   limit: number;
-  mode?: string | object;
 }

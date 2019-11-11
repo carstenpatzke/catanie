@@ -1,15 +1,8 @@
-import { LoginService } from "users/login.service";
 import { NO_ERRORS_SCHEMA } from "@angular/core";
 import { async, ComponentFixture, TestBed } from "@angular/core/testing";
 import { ReactiveFormsModule } from "@angular/forms";
-import { Store, StoreModule } from "@ngrx/store";
-import { NguiDatetimePickerModule } from "@ngui/datetime-picker";
-import {
-  MockConfigService,
-  MockStore,
-  MockUserApi,
-  MockLoginService
-} from "shared/MockStubs";
+import { Store } from "@ngrx/store";
+import { MockConfigService, MockStore, MockUserApi } from "shared/MockStubs";
 import { UserApi } from "shared/sdk/services";
 import { ConfigService } from "../../shared/services";
 
@@ -25,9 +18,7 @@ describe("UserSettingsComponent", () => {
       schemas: [NO_ERRORS_SCHEMA],
       imports: [
         ReactiveFormsModule,
-        NguiDatetimePickerModule,
-        SharedCatanieModule,
-        StoreModule.forRoot({})
+        SharedCatanieModule
       ],
       declarations: [UserSettingsComponent]
     });
@@ -36,7 +27,6 @@ describe("UserSettingsComponent", () => {
         providers: [
           // needed for config form sub component
           { provide: ConfigService, useClass: MockConfigService },
-          { provide: LoginService, useClass: MockLoginService },
           { provide: Store, useClass: MockStore },
           { provide: UserApi, useClass: MockUserApi }
         ]

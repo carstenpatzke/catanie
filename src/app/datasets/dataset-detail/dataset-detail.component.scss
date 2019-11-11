@@ -1,9 +1,38 @@
+@import "../../../theme.scss";
+
 mat-card {
+  margin: 1em;
+
+  .about-header {
+    background-color: mat-color($primary, lighter);
+  }
+
+  .structural-header {
+    background-color: mat-color($accent, lighter);
+  }
+
+  .admin-header {
+    background-color: mat-color($warn, lighter);
+  }
+
+  .derived-header {
+    background-color: mat-color($brown, 50);
+  }
+
+  .scientific-header {
+    background-color: mat-color($violet, 50);
+  }
+
   mat-icon {
     vertical-align: middle;
   }
 
   table {
+    th {
+      text-align: left;
+      padding-right: 0.5em;
+    }
+
     td {
       padding: 0.5em;
 
@@ -11,10 +40,29 @@ mat-card {
         cursor: pointer;
       }
     }
+  }
 
+  .about-table {
     th {
-      text-align: left;
-      padding-right: 0.5em;
+      min-width: 10em;
+    }
+
+    td {
+      width: 100%;
+    }
+
+    .keywords-row {
+      .add-keyword-chip:hover {
+        cursor: pointer;
+      }
+
+      mat-form-field {
+        width: 92%;
+      }
+
+      .done-edit-button {
+        margin-left: 1em;
+      }
     }
   }
 }

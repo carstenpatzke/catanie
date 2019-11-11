@@ -6,16 +6,16 @@ import { DialogComponent } from "shared/modules/dialog/dialog.component";
 import { MatCheckboxChange, MatDialog } from "@angular/material";
 import { Router } from "@angular/router";
 import {
-  ShowMessageAction,
-  SelectColumnAction,
-  DeselectColumnAction
+  showMessageAction,
+  selectColumnAction,
+  deselectColumnAction
 } from "state-management/actions/user.actions";
 import { Subscription } from "rxjs";
 import {
-  getDisplayedColumns,
-  getConfigurableColumns
-} from "../../state-management/selectors/users.selectors";
-import { getError, submitJob } from "state-management/selectors/jobs.selectors";
+  getColumns,
+  getIsLoading
+} from "../../state-management/selectors/user.selectors";
+import { getSubmitError } from "state-management/selectors/jobs.selectors";
 import { select, Store } from "@ngrx/store";
 import {
   clearSelectionAction,
@@ -32,7 +32,6 @@ import {
 import {
   getDatasets,
   getDatasetsPerPage,
-  getIsLoading,
   getPage,
   getSelectedDatasets,
   getTotalSets,
@@ -40,19 +39,14 @@ import {
   getPublicViewMode
 } from "state-management/selectors/datasets.selectors";
 import { FormControl } from "@angular/forms";
-
-export interface PageChangeEvent {
-  pageIndex: number;
-  pageSize: number;
-  length: number;
-}
+import { PageChangeEvent } from "shared/modules/table/table.component";
 
 export interface SortChangeEvent {
   active: keyof Dataset;
   direction: "asc" | "desc" | "";
 }
 
-export interface DatasetDerivationsMap {
+interface DatasetDerivationsMap {
   datasetPid: string;
   derivedDatasetsNum: number;
 }
@@ -63,25 +57,23 @@ export interface DatasetDerivationsMap {
   styleUrls: ["dataset-table.component.scss"]
 })
 export class DatasetTableComponent implements OnInit, OnDestroy {
-  datasets$ = this.store.pipe(select(getDatasets));
+  datasets: Dataset[];
   currentPage$ = this.store.pipe(select(getPage));
   datasetsPerPage$ = this.store.pipe(select(getDatasetsPerPage));
   datasetCount$ = this.store.select(getTotalSets);
   loading$ = this.store.pipe(select(getIsLoading));
 
-  datasetsSubscription: Subscription;
-  datasetPids: string[] = [];
-  datasetDerivationsMaps: DatasetDerivationsMap[] = [];
-  derivationMapPids: string[] = [];
+  private subscriptions: Subscription[] = [];
 
-  public currentMode: ArchViewMode;
-  private selectedSets$ = this.store.pipe(select(getSelectedDatasets));
-  private mode$ = this.store.pipe(select(getArchiveViewMode));
+  configForm = new FormControl();
+  configColumns: string[] = [];
+  displayedColumns: string[] = [];
+
   private selectedPids: string[] = [];
-  private selectedPidsSubscription = this.selectedSets$.subscribe(datasets => {
-    this.selectedPids = datasets.map(dataset => dataset.pid);
-  });
+  selectedSets: Dataset[] = [];
   private inBatchPids: string[] = [];
+
+  public currentArchViewMode: ArchViewMode;
   public viewModes = ArchViewMode;
   private modes = [
     ArchViewMode.all,
@@ -92,121 +84,20 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
     ArchViewMode.user_error
   ];
 
-  // compatibility analogs of observables
-  private selectedSets: Dataset[] = [];
-  private selectedSetsSubscription = this.selectedSets$.subscribe(
-    selectedSets => (this.selectedSets = selectedSets)
-  );
-  private modeSubscription = this.mode$.subscribe((mode: ArchViewMode) => {
-    this.currentMode = mode;
-  });
-  // and eventually be removed.
-  private submitJobSubscription: Subscription;
-  private jobErrorSubscription: Subscription;
-  dispColumns$ = this.store.pipe(select(getDisplayedColumns));
-
-  configCols$ = this.store.pipe(select(getConfigurableColumns));
-  configForm = new FormControl();
-  $ = this.store.pipe(select(getConfigurableColumns)).subscribe(ret => {
-    // this is required to set all columns check to true
-    // param must match the type defined by the ngFor in template
-    // setTrue can be used to filter out columns that should be false by default
-    const setTrue = ret.filter(item => {
-      return item !== "derivedDatasetsNum";
-    });
-    this.configForm.setValue(setTrue);
-  });
-
   searchPublicDataEnabled = this.appConfig.searchPublicDataEnabled;
-  viewPublic = false;
-  viewPublicSubscription: Subscription;
+  currentPublicViewMode = false;
 
-  constructor(
-    private router: Router,
-    private store: Store<any>,
-    private archivingSrv: ArchivingService,
-    public dialog: MatDialog,
-    @Inject(APP_CONFIG) public appConfig: AppConfig
-  ) {}
-
-  ngOnInit() {
-    this.submitJobSubscription = this.store.pipe(select(submitJob)).subscribe(
-      ret => {
-        if (ret && Array.isArray(ret)) {
-          console.log(ret);
-          this.store.dispatch(clearSelectionAction());
-        }
-      },
-      error => {
-        this.store.dispatch(
-          new ShowMessageAction({
-            type: MessageType.Error,
-            content: "Job not Submitted",
-            duration: 5000
-          })
-        );
-      }
-    );
-
-    this.jobErrorSubscription = this.store
-      .pipe(select(getError))
-      .subscribe(err => {
-        if (err) {
-          this.store.dispatch(
-            new ShowMessageAction({
-              type: MessageType.Error,
-              content: err.message,
-              duration: 5000
-            })
-          );
-        }
-      });
-
-    this.datasetsSubscription = this.store
-      .pipe(select(getDatasets))
-      .subscribe(datasets => {
-        this.datasetPids = datasets.map(dataset => {
-          return dataset.pid;
-        });
-        this.derivationMapPids = this.datasetDerivationsMaps.map(
-          datasetderivationMap => {
-            return datasetderivationMap.datasetPid;
-          }
-        );
-        datasets.forEach(dataset => {
-          if (!this.derivationMapPids.includes(dataset.pid)) {
-            const map: DatasetDerivationsMap = {
-              datasetPid: dataset.pid,
-              derivedDatasetsNum: this.countDerivedDatasets(dataset)
-            };
-            this.datasetDerivationsMaps.push(map);
-          }
-        });
-      });
-
-    this.viewPublicSubscription = this.store
-      .pipe(select(getPublicViewMode))
-      .subscribe(viewPublic => {
-        this.viewPublic = viewPublic;
-      });
-  }
-
-  ngOnDestroy() {
-    this.modeSubscription.unsubscribe();
-    this.selectedSetsSubscription.unsubscribe();
-    this.submitJobSubscription.unsubscribe();
-    this.jobErrorSubscription.unsubscribe();
-    this.selectedPidsSubscription.unsubscribe();
-    this.datasetsSubscription.unsubscribe();
-  }
+  datasetPids: string[] = [];
+  datasetDerivationsMaps: DatasetDerivationsMap[] = [];
+  derivationMapPids: string[] = [];
 
   onSelectColumn(event: any): void {
     const column = event.source.value;
     if (event.isUserInput) {
       if (event.source.selected) {
-        this.store.dispatch(new SelectColumnAction(column));
+        this.store.dispatch(selectColumnAction({ column }));
       } else if (!event.source.selected) {
-        this.store.dispatch(new DeselectColumnAction(column));
+        this.store.dispatch(deselectColumnAction({ column }));
       }
     }
   }
@@ -221,9 +112,9 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
   }
 
   onViewPublicChange(value: boolean): void {
-    this.viewPublic = value;
+    this.currentPublicViewMode = value;
     this.store.dispatch(
-      setPublicViewModeAction({ isPublished: this.viewPublic })
+      setPublicViewModeAction({ isPublished: this.currentPublicViewMode })
     );
   }
 
@@ -245,15 +136,16 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
           () => this.store.dispatch(clearSelectionAction()),
           err =>
             this.store.dispatch(
-              new ShowMessageAction({
-                type: MessageType.Error,
-                content: err.message,
-                duration: 5000
+              showMessageAction({
+                message: {
+                  type: MessageType.Error,
+                  content: err.message,
+                  duration: 5000
+                }
               })
             )
         );
       }
-      // this.onClose.emit(result);
     });
   }
 
@@ -278,10 +170,12 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
           () => this.store.dispatch(clearSelectionAction()),
           err =>
             this.store.dispatch(
-              new ShowMessageAction({
-                type: MessageType.Error,
-                content: err.message,
-                duration: 5000
+              showMessageAction({
+                message: {
+                  type: MessageType.Error,
+                  content: err.message,
+                  duration: 5000
+                }
               })
             )
         );
@@ -356,6 +250,12 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
     return this.selectedPids.indexOf(dataset.pid) !== -1;
   }
 
+  isAllSelected(): boolean {
+    const numSelected = this.selectedSets ? this.selectedSets.length : 0;
+    const numRows = this.datasets ? this.datasets.length : 0;
+    return numSelected === numRows;
+  }
+
   isInBatch(dataset: Dataset): boolean {
     return this.inBatchPids.indexOf(dataset.pid) !== -1;
   }
@@ -405,5 +305,91 @@ export class DatasetTableComponent implements OnInit, OnDestroy {
       });
     }
     return derivedDatasetsNum;
+  }
+
+  constructor(
+    private router: Router,
+    private store: Store<any>,
+    private archivingSrv: ArchivingService,
+    public dialog: MatDialog,
+    @Inject(APP_CONFIG) public appConfig: AppConfig
+  ) {}
+
+  ngOnInit() {
+    this.subscriptions.push(
+      this.store.pipe(select(getDatasets)).subscribe(datasets => {
+        this.datasets = datasets;
+      })
+    );
+
+    this.subscriptions.push(
+      this.store.pipe(select(getSubmitError)).subscribe(err => {
+        if (!err) {
+          this.store.dispatch(clearSelectionAction());
+        }
+      })
+    );
+
+    this.subscriptions.push(
+      this.store.pipe(select(getColumns)).subscribe(tableColumns => {
+        this.configColumns = tableColumns
+          .filter(column => column.name !== "select")
+          .map(column => column.name);
+
+        const setTrue = tableColumns
+          .filter(column => column.enabled)
+          .filter(column => column.name !== "select")
+          .map(column => column.name);
+
+        this.displayedColumns = tableColumns
+          .filter(column => column.enabled)
+          .map(column => column.name);
+
+        this.configForm.setValue(setTrue);
+      })
+    );
+
+    this.subscriptions.push(
+      this.store.pipe(select(getDatasets)).subscribe(datasets => {
+        this.datasetPids = datasets.map(dataset => dataset.pid);
+        this.derivationMapPids = this.datasetDerivationsMaps.map(
+          datasetderivationMap => datasetderivationMap.datasetPid
+        );
+        datasets.forEach(dataset => {
+          if (!this.derivationMapPids.includes(dataset.pid)) {
+            const map: DatasetDerivationsMap = {
+              datasetPid: dataset.pid,
+              derivedDatasetsNum: this.countDerivedDatasets(dataset)
+            };
+            this.datasetDerivationsMaps.push(map);
+          }
+        });
+      })
+    );
+
+    this.subscriptions.push(
+      this.store.pipe(select(getSelectedDatasets)).subscribe(selectedSets => {
+        this.selectedSets = selectedSets;
+        this.selectedPids = selectedSets.map(dataset => dataset.pid);
+      })
+    );
+
+    this.subscriptions.push(
+      this.store
+        .pipe(select(getArchiveViewMode))
+        .subscribe((mode: ArchViewMode) => {
+          this.currentArchViewMode = mode;
+        })
+    );
+
+    this.subscriptions.push(
+      this.store.pipe(select(getPublicViewMode)).subscribe(publicViewMode => {
+        this.currentPublicViewMode = publicViewMode;
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
   }
 }

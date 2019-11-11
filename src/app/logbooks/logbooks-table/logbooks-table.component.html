@@ -11,9 +11,9 @@
       <mat-header-cell *matHeaderCellDef>
         <div fxLayout="column" style="align-items: center">
           <div>
-            <i class="material-icons">fingerprint</i>
+            <mat-icon>fingerprint</mat-icon>
           </div>
-          <div class="table_column">Name</div>
+          <div>Name</div>
         </div>
       </mat-header-cell>
       <mat-cell *matCellDef="let logbook">{{ logbook.name }}</mat-cell>
@@ -24,14 +24,16 @@
       <mat-header-cell *matHeaderCellDef>
         <div fxLayout="column" style="align-items: center">
           <div>
-            <i class="material-icons">calendar_today</i>
+            <mat-icon>calendar_today</mat-icon>
           </div>
-          <div class="table_column">Latest&nbsp;Entry</div>
+          <div>Latest&nbsp;Entry</div>
         </div>
       </mat-header-cell>
       <mat-cell *matCellDef="let logbook">
         <div fxLayout="column" *ngIf="logbook.messages.length > 0">
-            {{ logbook.messages[0].origin_server_ts | date: "yyyy-MM-dd, EEE HH:mm" }}
+          {{
+            logbook.messages[0].origin_server_ts | date: "yyyy-MM-dd, EEE HH:mm"
+          }}
         </div>
         <div fxLayout="column" *ngIf="logbook.messages.length === 0">
           No entries.
@@ -44,14 +46,17 @@
       <mat-header-cell *matHeaderCellDef>
         <div fxLayout="column" style="align-items: center">
           <div>
-            <i class="material-icons">person</i>
+            <mat-icon>person</mat-icon>
           </div>
-          <div class="table_column">Sender</div>
+          <div>Sender</div>
         </div>
       </mat-header-cell>
       <mat-cell *matCellDef="let logbook">
         <div fxLayout="column" *ngIf="logbook.messages.length > 0">
-          {{ logbook.messages[0].sender | slice: 1:logbook.messages[0].sender.indexOf(":") }}
+          {{
+            logbook.messages[0].sender
+              | slice: 1:logbook.messages[0].sender.indexOf(":")
+          }}
         </div>
         <div fxLayout="column" *ngIf="logbook.messages.length === 0">
           --
@@ -64,9 +69,9 @@
       <mat-header-cell *matHeaderCellDef>
         <div fxLayout="column" style="align-items: center">
           <div>
-            <i class="material-icons">message</i>
+            <mat-icon>message</mat-icon>
           </div>
-          <div class="table_column">Entry</div>
+          <div>Entry</div>
         </div>
       </mat-header-cell>
       <mat-cell *matCellDef="let logbook">
@@ -87,8 +92,4 @@
       (click)="onClick(logbook)"
     ></mat-row>
   </mat-table>
-</div>
-
-<div *ngIf="logbooks && logbooks.length === 0">
-  {{ hasFetched ? "No logbooks." : "Loading..." }}
 </div>

@@ -3,7 +3,6 @@ import { CommonModule } from "@angular/common";
 import { FlexLayoutModule } from "@angular/flex-layout";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { LoginComponent } from "users/login/login.component";
-import { LoginService } from "./login.service";
 import { NgModule } from "@angular/core";
 import { SharedCatanieModule } from "shared/shared.module";
 import { StoreModule } from "@ngrx/store";
@@ -14,7 +13,9 @@ import {
   MatCheckboxModule,
   MatGridListModule,
   MatButtonModule,
-  MatIconModule
+  MatIconModule,
+  MatFormFieldModule,
+  MatInputModule
 } from "@angular/material";
 
 @NgModule({
@@ -25,13 +26,15 @@ import {
     MatButtonModule,
     MatCardModule,
     MatCheckboxModule,
+    MatFormFieldModule,
     MatGridListModule,
     MatIconModule,
+    MatInputModule,
     ReactiveFormsModule,
     SharedCatanieModule,
     StoreModule.forFeature("users", userReducer)
   ],
   declarations: [LoginComponent, UserSettingsComponent],
-  providers: [ADAuthService, LoginService]
+  providers: [ADAuthService]
 })
 export class UsersModule {}

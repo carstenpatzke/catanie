@@ -1,48 +1,37 @@
-import { Sample, SampleFilters } from "state-management/models";
+import { Sample, SampleFilters, Dataset } from "state-management/models";
 
 export interface SampleState {
-  samples: { [sampleId: string]: Sample };
-  selectedSamples: Sample[];
-  datasets: string[];
+  samples: Sample[];
   currentSample: Sample;
-  totalCount: number;
-  submitComplete: boolean;
+  datasets: Dataset[];
 
-  samplesLoading: boolean;
-  datasetsLoading: boolean;
-  error: Error;
+  samplesCount: number;
+  datasetsCount: number;
 
-  addingAttachment: boolean;
-  deletingAttachment: boolean;
+  samplefilters: SampleFilters;
 
-  searchTerms: string;
-
-  selectedId: string;
-  filters: SampleFilters;
+  datasetFilters: SampleFilters;
 }
 
 export const initialSampleState: SampleState = {
-  samples: {},
-  selectedSamples: [],
-  datasets: [],
+  samples: [],
   currentSample: null,
-  totalCount: 0,
-  submitComplete: false,
+  datasets: [],
 
-  samplesLoading: true,
-  datasetsLoading: true,
-  error: undefined,
+  samplesCount: 0,
+  datasetsCount: 0,
 
-  addingAttachment: false,
-  deletingAttachment: false,
-
-  searchTerms: "",
-
-  filters: {
+  samplefilters: {
     text: "",
     sortField: "creationTime:desc",
     skip: 0,
     limit: 25
   },
-  selectedId: null
+
+  datasetFilters: {
+    text: "",
+    sortField: "createdAt:desc",
+    skip: 0,
+    limit: 25
+  }
 };

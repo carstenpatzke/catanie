@@ -6,11 +6,12 @@ import { Store, select } from "@ngrx/store";
 import { Proposal } from "shared/sdk";
 import { Subscription } from "rxjs";
 import {
-  getHasFetched,
-  getProposalPage,
-  getProposalCount,
+  getPage,
+  getProposalsCount,
   getProposalsPerPage,
-  getProposalList
+  getProposals,
+  getDateRangeFilter,
+  getHasAppliedFilters
 } from "state-management/selectors/proposals.selectors";
 import {
   TableColumn,
@@ -18,13 +19,15 @@ import {
   SortChangeEvent
 } from "shared/modules/table/table.component";
 import {
-  ChangePageAction,
-  SortProposalByColumnAction,
-  FetchProposalAction,
-  FetchProposalsAction,
-  SearchProposalAction
+  changePageAction,
+  sortByColumnAction,
+  fetchProposalsAction,
+  setTextFilterAction,
+  setDateRangeFilterAction,
+  clearFacetsAction
 } from "state-management/actions/proposals.actions";
-import { distinctUntilChanged, map } from "rxjs/operators";
+import { MatDatepickerInputEvent } from "@angular/material";
+import { DateRange } from "datasets/datasets-filter/datasets-filter.component";
 
 @Component({
   selector: "proposal-dashboard",
@@ -32,14 +35,14 @@ import { distinctUntilChanged, map } from "rxjs/operators";
   styleUrls: ["./proposal-dashboard.component.scss"]
 })
 export class ProposalDashboardComponent implements OnInit, OnDestroy {
+  private proposalsSubscription: Subscription;
+  clearSearchBar: boolean;
 
-  private proposalSubscription: Subscription;
-  private hasFetchedSubscription: Subscription;
-
-  private hasFetched$ = this.store.pipe(select(getHasFetched));
-  currentPage$ = this.store.pipe(select(getProposalPage));
-  dataCount$ = this.store.pipe(select(getProposalCount));
-  dataPerPage$ = this.store.pipe(select(getProposalsPerPage));
+  hasAppliedFilters$ = this.store.pipe(select(getHasAppliedFilters));
+  dateRangeFilter$ = this.store.pipe(select(getDateRangeFilter));
+  currentPage$ = this.store.pipe(select(getPage));
+  proposalsCount$ = this.store.pipe(select(getProposalsCount));
+  proposalsPerPage$ = this.store.pipe(select(getProposalsPerPage));
 
   tableData: any[];
   tableColumns: TableColumn[] = [
@@ -51,16 +54,10 @@ export class ProposalDashboardComponent implements OnInit, OnDestroy {
     },
     { name: "title", icon: "fingerprint", sort: true, inList: true },
     { name: "author", icon: "face", sort: true, inList: true },
-    { name: "start", icon: "timer", sort: false, inList: true },
-    { name: "end", icon: "timer_off", sort: false, inList: true }
+    { name: "start", icon: "timer", sort: true, inList: true },
+    { name: "end", icon: "timer_off", sort: true, inList: true }
   ];
   tablePaginate = true;
-  constructor(
-    @Inject(APP_CONFIG) public appConfig: AppConfig,
-    private datePipe: DatePipe,
-    private router: Router,
-    private store: Store<Proposal>
-  ) {}
 
   formatTableData(proposals: Proposal[]): any[] {
     if (proposals) {
@@ -70,7 +67,13 @@ export class ProposalDashboardComponent implements OnInit, OnDestroy {
           title: proposal.title,
           author: proposal.firstname + " " + proposal.lastname
         };
-        if (
+        if (proposal.startTime && proposal.endTime) {
+          data.start = this.datePipe.transform(
+            proposal.startTime,
+            "yyyy-MM-dd"
+          );
+          data.end = this.datePipe.transform(proposal.endTime, "yyyy-MM-dd");
+        } else if (
           proposal.MeasurementPeriodList &&
           proposal.MeasurementPeriodList.length > 0
         ) {
@@ -93,45 +96,89 @@ export class ProposalDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  onClear() {
+    this.clearSearchBar = true;
+    this.store.dispatch(clearFacetsAction());
+  }
+
   onTextSearchChange(query: string) {
-    this.store.dispatch(new SearchProposalAction(query));
+    this.clearSearchBar = false;
+    this.store.dispatch(setTextFilterAction({ text: query }));
+    this.store.dispatch(fetchProposalsAction());
+  }
+
+  onDateChange(event: DateRange) {
+    if (event) {
+      const { begin, end } = event;
+      this.store.dispatch(
+        setDateRangeFilterAction({
+          begin: begin.toISOString(),
+          end: end.toISOString()
+        })
+      );
+    } else {
+      this.store.dispatch(
+        setDateRangeFilterAction({
+          begin: null,
+          end: null
+        })
+      );
+    }
+    this.store.dispatch(fetchProposalsAction());
   }
 
   onPageChange(event: PageChangeEvent) {
-    this.store.dispatch(new ChangePageAction(event.pageIndex, event.pageSize));
+    this.store.dispatch(
+      changePageAction({ page: event.pageIndex, limit: event.pageSize })
+    );
   }
 
   onSortChange(event: SortChangeEvent) {
-    if (event.active === "author") {
-      event.active = "firstname";
+    switch (event.active) {
+      case "author": {
+        event.active = "firstname";
+        break;
+      }
+      case "start": {
+        event.active = "startTime";
+        break;
+      }
+      case "end": {
+        event.active = "endTime";
+        break;
+      }
+      default: {
+        break;
+      }
     }
     this.store.dispatch(
-      new SortProposalByColumnAction(event.active, event.direction)
+      sortByColumnAction({ column: event.active, direction: event.direction })
     );
   }
 
   onRowClick(proposal: Proposal) {
-    this.store.dispatch(new FetchProposalAction(proposal.proposalId));
-    this.router.navigateByUrl("/proposals/" + proposal.proposalId);
+    const id = encodeURIComponent(proposal.proposalId);
+    this.router.navigateByUrl("/proposals/" + id);
   }
 
-  ngOnInit() {
-    this.hasFetchedSubscription = this.hasFetched$
-      .pipe(
-        distinctUntilChanged(),
-        map(() => new FetchProposalsAction())
-      )
-      .subscribe(this.store);
+  constructor(
+    @Inject(APP_CONFIG) public appConfig: AppConfig,
+    private datePipe: DatePipe,
+    private router: Router,
+    private store: Store<Proposal>
+  ) {}
 
-    this.proposalSubscription = this.store
-      .pipe(select(getProposalList))
+  ngOnInit() {
+    this.store.dispatch(fetchProposalsAction());
+
+    this.proposalsSubscription = this.store
+      .pipe(select(getProposals))
       .subscribe(proposals => {
         this.tableData = this.formatTableData(proposals);
       });
   }
 
   ngOnDestroy() {
-    this.proposalSubscription.unsubscribe();
-    this.hasFetchedSubscription.unsubscribe();
+    this.proposalsSubscription.unsubscribe();
   }
 }

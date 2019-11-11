@@ -1,180 +1,110 @@
+import { Action, createReducer, on } from "@ngrx/store";
 import {
   initialProposalsState,
   ProposalsState
 } from "../state/proposals.store";
-import {
-  FETCH_DATASETS_FOR_PROPOSAL_COMPLETE,
-  FETCH_PROPOSAL_COMPLETE,
-  FETCH_PROPOSALS_COMPLETE,
-  FetchDatasetsForProposalCompleteAction,
-  FetchProposalCompleteAction,
-  FetchProposalsCompleteAction,
-  ProposalsAction,
-  SELECT_PROPOSAL,
-  SelectProposalAction,
-  CHANGE_PAGE,
-  ChangePageAction,
-  FETCH_COUNT_PROPOSALS_SUCCESS,
-  FetchCountOfProposalsSuccess,
-  SEARCH_PROPOSALS,
-  SORT_PROPOSALS_BY_COLUMN,
-  SortProposalByColumnAction,
-  SearchProposalAction,
-  ADD_ATTACHMENT,
-  ADD_ATTACHMENT_COMPLETE,
-  AddAttachmentCompleteAction,
-  ADD_ATTACHMENT_FAILED,
-  DELETE_ATTACHMENT,
-  DELETE_ATTACHMENT_COMPLETE,
-  DELETE_ATTACHMENT_FAILED,
-  DeleteAttachmentCompleteAction,
-  UPDATE_ATTACHMENT_CAPTION_COMPLETE,
-  UPDATE_ATTACHMENT_CAPTION_FAILED,
-  UpdateAttachmentCaptionCompleteAction
-} from "../actions/proposals.actions";
-import { LOGOUT_COMPLETE, LogoutCompleteAction } from "../actions/user.actions";
+import * as fromActions from "../actions/proposals.actions";
 
-export function proposalsReducer(
-  state: ProposalsState = initialProposalsState,
-  action: ProposalsAction | LogoutCompleteAction
-): ProposalsState {
-  if (action.type.indexOf("[Proposals]") !== -1) {
-    console.log("Action came in! " + action.type);
-  }
-  switch (action.type) {
-    case SEARCH_PROPOSALS: {
-      const { query } = action as SearchProposalAction;
-      const propFilters = { ...state.propFilters, text: query };
-      const proposalsLoading = true;
-      return { ...state, propFilters, proposalsLoading };
-    }
+const reducer = createReducer(
+  initialProposalsState,
 
-    case SORT_PROPOSALS_BY_COLUMN: {
-      const { column, direction } = action as SortProposalByColumnAction;
-      const sortField = column + (direction ? " " + direction : "");
-      const propFilters = { ...state.propFilters, sortField, skip: 0 };
-      const proposalsLoading = true;
-      return { ...state, propFilters, proposalsLoading };
-    }
+  on(fromActions.fetchProposalsCompleteAction, (state, { proposals }) => ({
+    ...state,
+    proposals
+  })),
 
-    case SELECT_PROPOSAL:
-      const selectedId = (action as SelectProposalAction).proposalId;
-      return { ...state, selectedId };
+  on(fromActions.fetchCountCompleteAction, (state, { count }) => ({
+    ...state,
+    proposalsCount: count
+  })),
 
-    case FETCH_COUNT_PROPOSALS_SUCCESS: {
-      const proposalCount = (action as FetchCountOfProposalsSuccess).count;
-      return { ...state, proposalCount };
-    }
-    case FETCH_PROPOSALS_COMPLETE: {
-      const list = (action as FetchProposalsCompleteAction).proposals;
-      const proposalsLoading = false;
-      const proposals = list.reduce(
-        (existingProposals, proposal) => ({
-          ...existingProposals,
-          [proposal.proposalId]: proposal
-        }),
-        {}
+  on(fromActions.fetchProposalCompleteAction, (state, { proposal }) => ({
+    ...state,
+    currentProposal: proposal
+  })),
+
+  on(
+    fromActions.fetchProposalDatasetsCompleteAction,
+    (state, { datasets }) => ({ ...state, datasets })
+  ),
+
+  on(
+    fromActions.fetchProposalDatasetsCountCompleteAction,
+    (state, { count }) => ({ ...state, datasetsCount: count })
+  ),
+
+  on(fromActions.addAttachmentCompleteAction, (state, { attachment }) => {
+    const attachments = state.currentProposal.attachments;
+    attachments.push(attachment);
+    const currentProposal = { ...state.currentProposal, attachments };
+    return { ...state, currentProposal };
+  }),
+
+  on(
+    fromActions.updateAttachmentCaptionCompleteAction,
+    (state, { attachment }) => {
+      const attachments = state.currentProposal.attachments.filter(
+        existingAttachment => existingAttachment.id !== attachment.id
       );
-      return { ...state, proposals, proposalsLoading, hasFetched: true };
-    }
-    case FETCH_PROPOSAL_COMPLETE: {
-      const currentProposal = (action as FetchProposalCompleteAction).proposal;
+      attachments.push(attachment);
+      const currentProposal = { ...state.currentProposal, attachments };
       return { ...state, currentProposal };
     }
-    case FETCH_DATASETS_FOR_PROPOSAL_COMPLETE: {
-      const list = (action as FetchDatasetsForProposalCompleteAction).datasets;
-      const datasets = list.reduce(
-        (existingDatasets, dataset) => ({
-          ...existingDatasets,
-          [dataset.pid]: dataset
-        }),
-        {}
-      );
-      const datasetCount = Object.keys(datasets).length;
-      return { ...state, datasets, datasetCount };
-    }
-    case CHANGE_PAGE: {
-      const { page, limit } = action as ChangePageAction;
-      const skip = page * limit;
-      const filters = { ...state.filters, skip, limit };
+  ),
 
-      const proposalsLoading = true;
-      return { ...state, filters, proposalsLoading };
-    }
+  on(fromActions.removeAttachmentCompleteAction, (state, { attachmentId }) => {
+    const attachments = state.currentProposal.attachments.filter(
+      attachment => attachment.id !== attachmentId
+    );
+    const currentProposal = { ...state.currentProposal, attachments };
+    return { ...state, currentProposal };
+  }),
 
-    case ADD_ATTACHMENT: {
-      return { ...state, addingAttachment: true };
-    }
+  on(fromActions.setTextFilterAction, (state, { text }) => {
+    const proposalFilters = { ...state.proposalFilters, text, skip: 0 };
+    return { ...state, proposalFilters };
+  }),
+  on(fromActions.setDateRangeFilterAction, (state, { begin, end }) => {
+    const oldTime = state.proposalFilters.dateRange;
+    const dateRange = { ...oldTime, begin, end };
+    const proposalFilters = { ...state.proposalFilters, dateRange };
+    return { ...state, proposalFilters };
+  }),
 
-    case ADD_ATTACHMENT_COMPLETE: {
-      const attachment = (action as AddAttachmentCompleteAction).attachment;
-      const attachments = state.currentProposal.attachments;
-      const attach2 = new Set(attachments);
-      attach2.add(attachment);
+  on(fromActions.clearFacetsAction, state => {
+    const limit = state.proposalFilters.limit; // Save limit
+    const proposalFilters = {
+      ...initialProposalsState.proposalFilters,
+      skip: 0,
+      limit
+    };
+    return { ...state, proposalFilters };
+  }),
 
-      return {
-        ...state,
-        addingAttachment: false,
-        currentProposal: {
-          ...state.currentProposal,
-          attachments: Array.from(attach2)
-        }
-      };
-    }
+  on(fromActions.changePageAction, (state, { page, limit }) => {
+    const skip = page * limit;
+    const proposalFilters = { ...state.proposalFilters, skip, limit };
+    return { ...state, proposalFilters };
+  }),
+  on(fromActions.changeDatasetsPageAction, (state, { page, limit }) => {
+    const skip = page * limit;
+    const datasetFilters = { ...state.datasetFilters, skip, limit };
+    return { ...state, datasetFilters };
+  }),
 
-    case ADD_ATTACHMENT_FAILED: {
-      return { ...state };
-    }
+  on(fromActions.sortByColumnAction, (state, { column, direction }) => {
+    const sortField = column + (direction ? ":" + direction : "");
+    const proposalFilters = { ...state.proposalFilters, sortField, skip: 0 };
+    return { ...state, proposalFilters };
+  })
+);
 
-    case DELETE_ATTACHMENT: {
-      return { ...state, deletingAttachment: true };
-    }
-
-    case DELETE_ATTACHMENT_COMPLETE: {
-      const attachments = state.currentProposal.attachments;
-      const attachmentId = (action as DeleteAttachmentCompleteAction)
-        .attachmentId;
-      const attach2 = attachments.filter(
-        attachment => attachment.id !== attachmentId
-      );
-
-      return {
-        ...state,
-        deletingAttachment: false,
-        currentProposal: { ...state.currentProposal, attachments: attach2 }
-      };
-    }
-
-    case DELETE_ATTACHMENT_FAILED: {
-      return { ...state };
-    }
-
-    case UPDATE_ATTACHMENT_CAPTION_COMPLETE: {
-      const updatedAttachment = (action as UpdateAttachmentCaptionCompleteAction)
-        .attachment;
-      const attachments = state.currentProposal.attachments;
-      const attach2 = attachments.filter(
-        attachment => attachment.id !== updatedAttachment.id
-      );
-      attach2.push(updatedAttachment);
-
-      return {
-        ...state,
-        currentProposal: {
-          ...state.currentProposal,
-          attachments: attach2
-        }
-      };
-    }
-
-    case UPDATE_ATTACHMENT_CAPTION_FAILED: {
-      return { ...state };
-    }
-
-    case LOGOUT_COMPLETE:
-      return { ...initialProposalsState };
-
-    default:
-      return state;
+export function proposalsReducer(
+  state: ProposalsState | undefined,
+  action: Action
+) {
+  if (action.type.indexOf("[Proposal]") !== -1) {
+    console.log("Action came in! " + action.type);
   }
+  return reducer(state, action);
 }

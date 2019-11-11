@@ -5,11 +5,12 @@ import {
   MatFormFieldModule,
   MatIconModule,
   MatInputModule,
-  MatButtonModule
+  MatButtonModule,
+  MatTabsModule,
+  MatSelectModule
 } from "@angular/material";
 import { NgModule } from "@angular/core";
 import { SampleDetailComponent } from "./sample-detail/sample-detail.component";
-import { SampleDataFormComponent } from "./sample-data-form/sample-data-form.component";
 import { StoreModule } from "@ngrx/store";
 import { samplesReducer } from "../state-management/reducers/samples.reducer";
 import { SampleDialogComponent } from "./sample-dialog/sample-dialog.component";
@@ -17,8 +18,7 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { SampleDashboardComponent } from "./sample-dashboard/sample-dashboard.component";
 import { FlexLayoutModule } from "@angular/flex-layout";
 import { NgxJsonViewerModule } from "ngx-json-viewer";
-import { SearchBarModule } from "shared/modules/search-bar/search-bar.module";
-import { TableModule } from "shared/modules/table/table.module";
+import { SharedCatanieModule } from "shared/shared.module";
 
 @NgModule({
   imports: [
@@ -27,24 +27,20 @@ import { TableModule } from "shared/modules/table/table.module";
     FormsModule,
     MatButtonModule,
     MatCardModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatDialogModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatSelectModule,
+    MatTabsModule,
     NgxJsonViewerModule,
     ReactiveFormsModule,
-    SearchBarModule,
-    StoreModule.forFeature("samples", samplesReducer),
-    TableModule
+    SharedCatanieModule,
+    StoreModule.forFeature("samples", samplesReducer)
   ],
-  exports: [
-    SampleDetailComponent,
-    SampleDataFormComponent,
-    SampleDialogComponent
-  ],
+  exports: [SampleDetailComponent, SampleDialogComponent],
   declarations: [
     SampleDetailComponent,
-    SampleDataFormComponent,
     SampleDialogComponent,
     SampleDashboardComponent
   ],
